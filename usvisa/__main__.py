@@ -8,4 +8,5 @@ logger = logging.getLogger()
 
 if __name__ == "__main__":
     logger.debug("> main")
-    schedule.reschedule()
+    scheduler = schedule.Scheduler()
+    scheduler.reschedule_sooner()
