@@ -1,4 +1,5 @@
 """Utility functions."""
+import calendar
 import logging
 import os
 import random
@@ -56,8 +57,8 @@ def hibernate():
 @lru_cache
 def is_testing() -> bool:
     """Check whether current instance is for testing."""
-    falsy_strings = ["0", "false", "no"]
-    env_variable = os.environ.get("TEST")
+    falsy_strings = ["", "0", "false", "no"]
+    env_variable = os.environ.get("TEST", "")
     if env_variable.lower() in falsy_strings:
         return False
 
@@ -83,3 +84,8 @@ def get_credentials() -> tuple:
 def get_user_agent() -> str:
     """Retrieve user agent string to be used in the webdriver."""
     return TEST_USERAGENT if is_testing() else DEFAULT_USERAGENT
+
+
+def get_month_int(month_name: str) -> int:
+    """Map a month name (title formatting) to an integer (0-indexed)."""
+    return list(calendar.month_name).index(month_name.title())

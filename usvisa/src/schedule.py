@@ -1,6 +1,7 @@
 """Provide scheduling utility scripts."""
-
+import datetime
 import logging
+import re
 
 from selenium import webdriver
 from selenium.common import NoSuchElementException
@@ -15,7 +16,7 @@ from usvisa.src.constants import (
     DEFAULT_WEBDRIVER_CLASS, LOGIN_URL
 )
 from usvisa.src.utils import (
-    delayed, get_credentials, get_user_agent, hibernate,
+    delayed, get_credentials, get_month_int, get_user_agent, hibernate,
     quick_sleep
 )
 
@@ -26,6 +27,19 @@ class Appointment:
     city = None
     date = None
     time = None
+
+    def __init__(self, day, month, year, time, city):
+        self.city = city
+        self.date = datetime.date(year, month, day)
+        self.time = time
+
+    def __repr__(self):
+        return f"{self.date_repr} {self.time} in {self.city}"
+
+    @property
+    def date_repr(self):
+        """Return formatted date."""
+        return self.date.strftime("%Y-%m-%d")
 
 
 class Scheduler:
@@ -102,10 +116,16 @@ class Scheduler:
 
     def get_current_appointment(self):
         # Find appointment element
+        text_wrapper = self.driver.find_element(By.CSS_SELECTOR, ".consular-appt")
         # Retrieve text
+        day, month_name, year, time, city = re.findall(
+            r"(\d+) ([a-zA-Z]+), (\d+), (\d\d:\d\d) ([a-zA-Z]+)",
+            text_wrapper.text
+        )[0]
         # Parse text
+        month = get_month_int(month_name)
         # Store in attribute
-        return
+        self.current_appointment = Appointment(int(day), month, int(year), time, city)
 
     def navigate_reschedule_page(self):
         # Find "continue" CTA
@@ -137,8 +157,8 @@ class Scheduler:
         logger.debug("> reschedule_sooner")
         self.navigate_login_page()
         self.execute_login()
-        hibernate()
         self.get_current_appointment()
+        hibernate()
         self.navigate_reschedule_page()
         self.get_best_date()
         if self.new_appointment.date < self.current_appointment:
