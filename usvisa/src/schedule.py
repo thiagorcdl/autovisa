@@ -9,6 +9,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 
 from usvisa.src.constants import DEFAULT_USERAGENT, DEFAULT_WEBDRIVER_CLASS, LOGIN_URL
+from usvisa.src.utils import delayed
 
 logger = logging.getLogger()
 
@@ -45,11 +46,13 @@ class Scheduler:
 
     def navigate_login_page(self):
         self.driver.get(LOGIN_URL)
-        return
 
     def execute_login(self):
         # Find email field
+        user_email_input = self.driver.find_element(By.ID, "user_email")
+        delayed(user_email_input.click)()
         # Fill in email field
+        self.driver.find_element(By.ID, "user_email")
         # Find pwd field
         # Fill in pwd field
         # Find CTA
