@@ -3,13 +3,21 @@
 import logging
 
 from selenium import webdriver
+from selenium.common import NoSuchElementException
 from selenium.webdriver.chrome.options import Options
 
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
+from selenium.webdriver.remote.webelement import WebElement
 
-from usvisa.src.constants import DEFAULT_USERAGENT, DEFAULT_WEBDRIVER_CLASS, LOGIN_URL
-from usvisa.src.utils import delayed
+from usvisa.src.constants import (
+    BY_TYPE_ORDER, DEFAULT_USERAGENT,
+    DEFAULT_WEBDRIVER_CLASS, LOGIN_URL
+)
+from usvisa.src.utils import (
+    delayed, get_credentials, get_user_agent, hibernate,
+    quick_sleep
+)
 
 logger = logging.getLogger()
 
@@ -28,36 +36,69 @@ class Scheduler:
     new_appointment: Appointment = None
 
     def __init__(self):
-        driver_args = self.get_driver_args()
-        self.driver = DEFAULT_WEBDRIVER_CLASS(*driver_args)
+        driver_args, driver_kwargs = self.get_driver_args()
+        self.driver = DEFAULT_WEBDRIVER_CLASS(*driver_args, **driver_kwargs)
 
-    def get_driver_args(self) -> list:
+    def get_driver_args(self) -> tuple:
         """Return arguments for instantiating driver."""
         driver_args = []
+        driver_kwargs = {}
+        user_agent = get_user_agent()
+
         if self._WEBDRIVER_CLASS == webdriver.Chrome:
             options = Options()
-            options.add_argument(f"user-agent={DEFAULT_USERAGENT}")
-            driver_args.append(options)
+            options.add_argument(f"user-agent={user_agent}")
+            driver_kwargs["chrome_options"] = options
         elif self._WEBDRIVER_CLASS == webdriver.Firefox:
             profile = webdriver.FirefoxProfile()
-            profile.set_preference("general.useragent.override", DEFAULT_USERAGENT)
+            profile.set_preference("general.user_agent.override", user_agent)
             driver_args.append(profile)
-        return driver_args
+
+        return driver_args, driver_kwargs
 
     def navigate_login_page(self):
         self.driver.get(LOGIN_URL)
 
+    @delayed
+    def select_element(self, key: str) -> WebElement:
+        """Find and click element."""
+        logger.debug(f"> select_element")
+        for by_type in BY_TYPE_ORDER:
+            try:
+                element = self.driver.find_element(by_type, key)
+            except NoSuchElementException:
+                continue
+
+            element.click()
+            return element
+
+    @delayed
+    def write_input(self, element: WebElement, text: str):
+        """Send text to input element, character by character."""
+        logger.debug(f"> write_input")
+
+        for char in text:
+            quick_sleep()
+            element.send_keys(char)
+
     def execute_login(self):
+        email, password = get_credentials()
+
         # Find email field
-        user_email_input = self.driver.find_element(By.ID, "user_email")
-        delayed(user_email_input.click)()
+        email_input = self.select_element("user_email")
         # Fill in email field
-        self.driver.find_element(By.ID, "user_email")
+        self.write_input(email_input, email)
+
         # Find pwd field
+        password_input = self.select_element("user_password")
         # Fill in pwd field
-        # Find CTA
+        self.write_input(password_input, password)
+
+        # Consent to privacy policy
+        self.select_element(".icheckbox")
+
         # Click CTA
-        return
+        self.select_element("commit")
 
     def get_current_appointment(self):
         # Find appointment element
@@ -96,6 +137,7 @@ class Scheduler:
         logger.debug("> reschedule_sooner")
         self.navigate_login_page()
         self.execute_login()
+        hibernate()
         self.get_current_appointment()
         self.navigate_reschedule_page()
         self.get_best_date()
