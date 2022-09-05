@@ -2,10 +2,13 @@
 
 import logging
 
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 
-from usvisa.src.constants import DEFAULT_WEBDRIVER, LOGIN_URL
+from usvisa.src.constants import DEFAULT_USERAGENT, DEFAULT_WEBDRIVER_CLASS, LOGIN_URL
 
 logger = logging.getLogger()
 
@@ -18,12 +21,27 @@ class Appointment:
 
 class Scheduler:
 
+    _WEBDRIVER_CLASS = DEFAULT_WEBDRIVER_CLASS
     driver = None
     current_appointment: Appointment = None
     new_appointment: Appointment = None
 
     def __init__(self):
-        self.driver = DEFAULT_WEBDRIVER()
+        driver_args = self.get_driver_args()
+        self.driver = DEFAULT_WEBDRIVER_CLASS(*driver_args)
+
+    def get_driver_args(self) -> list:
+        """Return arguments for instantiating driver."""
+        driver_args = []
+        if self._WEBDRIVER_CLASS == webdriver.Chrome:
+            options = Options()
+            options.add_argument(f"user-agent={DEFAULT_USERAGENT}")
+            driver_args.append(options)
+        elif self._WEBDRIVER_CLASS == webdriver.Firefox:
+            profile = webdriver.FirefoxProfile()
+            profile.set_preference("general.useragent.override", DEFAULT_USERAGENT)
+            driver_args.append(profile)
+        return driver_args
 
     def navigate_login_page(self):
         self.driver.get(LOGIN_URL)
