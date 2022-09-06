@@ -1,14 +1,19 @@
 """Utility functions."""
 import calendar
+import json
 import logging
 import os
 import random
 import time
 from functools import lru_cache, wraps
+
+from seleniumwire.request import Request
+
 from usvisa.src.constants import (
     DEFAULT_USERAGENT, MAX_ACTION_SLEEP, MIN_ACTION_SLEEP,
     TEST_LOGIN, TEST_PWD, TEST_USERAGENT
 )
+from seleniumwire.utils import decode
 
 logger = logging.getLogger()
 
@@ -51,7 +56,7 @@ def long_sleep():
 
 def hibernate():
     """Sleep for a very long time, more than 2 minutes."""
-    return rand_sleep(min_sleep=60*2, max_sleep=60*3)
+    return rand_sleep(min_sleep=60 * 2, max_sleep=60 * 3)
 
 
 def wait_page_load():
@@ -59,6 +64,26 @@ def wait_page_load():
     reload.
     """
     return time.sleep(2.5)
+
+
+def wait_request():
+    """Sleep for enough time for a single request."""
+    return time.sleep(1)
+
+
+def get_response_body(request: Request) -> bytes:
+    """Esctract response body from request."""
+    response = request.response
+    return decode(
+        response.body,
+        response.headers.get('Content-Encoding', 'identity')
+    )
+
+
+def get_dict_response(request) -> list:
+    """Parse JSON response as list."""
+    response_body = get_response_body(request)
+    return json.loads(response_body)
 
 
 @lru_cache

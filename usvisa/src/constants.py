@@ -7,7 +7,7 @@ from seleniumwire import undetected_chromedriver
 LOGGING_LEVEL = logging.INFO
 
 MIN_ACTION_SLEEP = 1
-MAX_ACTION_SLEEP = 4
+MAX_ACTION_SLEEP = 2
 
 LOGIN_URL = "https://ais.usvisa-info.com/en-ca/niv/users/sign_in"
 
@@ -22,7 +22,7 @@ BY_TYPE_ORDER = (
     By.ID, By.CSS_SELECTOR, By.XPATH, By.NAME, By.CLASS_NAME, By.LINK_TEXT, By.TAG_NAME
 )
 
-# Test cosntants
+# Test constants
 
 TEST_LOGIN = "jerrymtc98@hotmail.com"
 TEST_PWD = "qwerty1234qwerty"

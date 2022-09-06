@@ -3,10 +3,11 @@
 
 import logging
 from usvisa import schedule
+from usvisa.src import LOGGING_LEVEL
 
 if __name__ == "__main__":
     logging.basicConfig()
-    logging.getLogger().setLevel(logging.DEBUG)
+    logging.getLogger().setLevel(LOGGING_LEVEL)
     logger = logging.getLogger()
 
     logger.debug("> main")
