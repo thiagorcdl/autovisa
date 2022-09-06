@@ -10,6 +10,9 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webelement import WebElement
+from selenium.webdriver.support.select import Select
+from seleniumwire import undetected_chromedriver
+from seleniumwire.undetected_chromedriver import ChromeOptions
 
 from usvisa.src.constants import (
     BY_TYPE_ORDER, DEFAULT_USERAGENT,
@@ -17,7 +20,7 @@ from usvisa.src.constants import (
 )
 from usvisa.src.utils import (
     delayed, get_credentials, get_month_int, get_user_agent, hibernate,
-    quick_sleep
+    quick_sleep, wait_page_load
 )
 
 logger = logging.getLogger()
@@ -52,6 +55,7 @@ class Scheduler:
     def __init__(self):
         driver_args, driver_kwargs = self.get_driver_args()
         self.driver = DEFAULT_WEBDRIVER_CLASS(*driver_args, **driver_kwargs)
+        self.driver.scopes = ["*.json"]
 
     def get_driver_args(self) -> tuple:
         """Return arguments for instantiating driver."""
@@ -63,6 +67,11 @@ class Scheduler:
             options = Options()
             options.add_argument(f"user-agent={user_agent}")
             driver_kwargs["chrome_options"] = options
+        elif self._WEBDRIVER_CLASS == undetected_chromedriver.Chrome:
+            options = ChromeOptions()
+            options.add_argument(f"user-agent={user_agent}")
+            driver_kwargs["options"] = options
+            driver_kwargs["seleniumwire_options"] = {}
         elif self._WEBDRIVER_CLASS == webdriver.Firefox:
             profile = webdriver.FirefoxProfile()
             profile.set_preference("general.user_agent.override", user_agent)
@@ -158,9 +167,9 @@ class Scheduler:
         self.navigate_login_page()
         self.execute_login()
         self.get_current_appointment()
-        hibernate()
         self.navigate_reschedule_page()
         self.get_best_date()
-        if self.new_appointment.date < self.current_appointment:
+        hibernate()
+        if self.new_appointment.date < self.current_appointment.date:
             self.execute_reschedule()
         return

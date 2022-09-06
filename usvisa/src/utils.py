@@ -35,7 +35,7 @@ def rand_sleep(min_sleep=MIN_ACTION_SLEEP, max_sleep=MAX_ACTION_SLEEP):
     max_sleep = max(0, max_sleep - 1)
 
     sleep_duration = float(random.randint(min_sleep, max_sleep))
-    sleep_duration += random.random()  # Add decimal to prevent always integer delays
+    sleep_duration += random.random() / 2  # Add decimal to prevent always integer
     time.sleep(sleep_duration)
 
 
@@ -52,6 +52,13 @@ def long_sleep():
 def hibernate():
     """Sleep for a very long time, more than 2 minutes."""
     return rand_sleep(min_sleep=60*2, max_sleep=60*3)
+
+
+def wait_page_load():
+    """Sleep for enough time for the webdriver to execute the action and page to
+    reload.
+    """
+    return time.sleep(2.5)
 
 
 @lru_cache

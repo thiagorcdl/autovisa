@@ -1,7 +1,8 @@
 """Hold default values."""
 import logging
-from selenium import webdriver
 from selenium.webdriver.common.by import By
+from seleniumwire import undetected_chromedriver
+
 
 LOGGING_LEVEL = logging.INFO
 
@@ -10,7 +11,7 @@ MAX_ACTION_SLEEP = 4
 
 LOGIN_URL = "https://ais.usvisa-info.com/en-ca/niv/users/sign_in"
 
-DEFAULT_WEBDRIVER_CLASS = webdriver.Firefox
+DEFAULT_WEBDRIVER_CLASS = undetected_chromedriver.Chrome
 
 DEFAULT_USERAGENT = (
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) "
