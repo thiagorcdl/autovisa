@@ -1,139 +1,40 @@
 """Provide scheduling utility scripts."""
 import datetime
 import logging
-import random
 import re
+import typing as t
 
-import seleniumwire
-from selenium import webdriver
-from selenium.common import ElementNotInteractableException, NoSuchElementException
 from selenium.webdriver import Keys
-from selenium.webdriver.chrome.options import Options
 
 from selenium.webdriver.common.by import By
-from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support.select import Select
-from seleniumwire import undetected_chromedriver
-from seleniumwire.undetected_chromedriver import ChromeOptions
+from seleniumwire.request import Request
 
-from usvisa.src.constants import (
-    BY_TYPE_ORDER, CITY_NAME_ID_MAP, DEFAULT_USERAGENT,
-    DEFAULT_WEBDRIVER_CLASS, LOGIN_URL
-)
+from usvisa.src.appointment import Appointment
+from usvisa.src.constants import CITY_NAME_ID_MAP, MAX_REQUEST_SEARCHES
+
 from usvisa.src.utils import (
-    delayed, get_credentials, get_month_int, get_dict_response, get_user_agent,
-    hibernate,
+    get_credentials, get_month_int, get_dict_response,
     is_prod, quick_sleep, wait_page_load, wait_request
 )
+from usvisa.src.webdriver import WebDriver
 
 logger = logging.getLogger()
 
 
-class Appointment:
-    city = None
-    date = None
-    time = None
-
-    def __init__(self, day, month, year, time, city):
-        self.city = city
-        self.date = datetime.date(year, month, day)
-        self.time = time
-
-    def __repr__(self):
-        return f"{self.date_repr} {self.time} in {self.city}"
-
-    @property
-    def date_repr(self):
-        """Return formatted date."""
-        return self.date.strftime("%Y-%m-%d")
-
-
-class Scheduler:
-    _WEBDRIVER_CLASS = DEFAULT_WEBDRIVER_CLASS
-    driver = None
-    current_appointment: Appointment = None
-    new_appointment: Appointment = None
-
-    def __init__(self):
-        driver_args, driver_kwargs = self.get_driver_args()
-        self.driver = DEFAULT_WEBDRIVER_CLASS(*driver_args, **driver_kwargs)
-
-    def get_driver_args(self) -> tuple:
-        """Return arguments for instantiating driver."""
-        driver_args = []
-        driver_kwargs = {}
-        user_agent = get_user_agent()
-
-        if self._WEBDRIVER_CLASS in (webdriver.Chrome, seleniumwire.webdriver.Chrome):
-            options = Options()
-            options.add_argument(f"user-agent={user_agent}")
-            driver_kwargs["chrome_options"] = options
-            driver_kwargs["service_log_path"] = "/dev/null"
-        elif self._WEBDRIVER_CLASS == undetected_chromedriver.Chrome:
-            options = ChromeOptions()
-            options.add_argument(f"user-agent={user_agent}")
-            driver_kwargs["options"] = options
-            driver_kwargs["seleniumwire_options"] = {}
-            driver_kwargs["service_log_path"] = "/dev/null"
-        elif self._WEBDRIVER_CLASS == webdriver.Firefox:
-            profile = webdriver.FirefoxProfile()
-            profile.set_preference("general.user_agent.override", user_agent)
-            driver_args.append(profile)
-
-        return driver_args, driver_kwargs
-
-    def navigate_login_page(self):
-        self.driver.get(LOGIN_URL)
-
-    def find_element(self, by_type, key: str) -> WebElement:
-        """Find element via defined "by" type."""
-        logger.debug(f"> find_element")
-        try:
-            return self.driver.find_element(by_type, key)
-        except NoSuchElementException as err:
-            pass
-
-    @delayed
-    def select_element(self, key: str) -> WebElement:
-        """Find and click element."""
-        logger.debug(f"> select_element")
-        for by_type in BY_TYPE_ORDER:
-            element = self.find_element(by_type, key)
-
-            if not element:
-                continue
-
-            try:
-                element.click()
-            except ElementNotInteractableException:
-                return None
-            return element
-
-    def select_random_element(self, selector_choices) -> WebElement:
-        """Run select_element() with a randomly-chosen seelctor."""
-        selector = random.choice(selector_choices)
-        return self.select_element(selector)
-
-    @delayed
-    def write_input(self, element: WebElement, text: str):
-        """Send text to input element, character by character."""
-        logger.debug(f"> write_input")
-
-        for char in text:
-            quick_sleep()
-            element.send_keys(char)
+class Scheduler(WebDriver):
+    """Class for encapsulating busines slogic for scheduling interviews."""
+    current_appointment: t.Optional[Appointment] = None
+    new_appointment: t.Optional[Appointment] = None
 
     def execute_login(self):
+        """Fill in credentials, consent to privacy policity and try logging in."""
         email, password = get_credentials()
 
-        # Find email field
         email_input = self.select_element("user_email")
-        # Fill in email field
         self.write_input(email_input, email)
 
-        # Find pwd field
         password_input = self.select_element("user_password")
-        # Fill in pwd field
         self.write_input(password_input, password)
 
         # Consent to privacy policy
@@ -143,6 +44,7 @@ class Scheduler:
         self.select_element("commit")
 
     def get_current_appointment(self):
+        """Parse raw text in page and store new Appointment instance."""
         # Find appointment element
         text_wrapper = self.driver.find_element(By.CSS_SELECTOR, ".consular-appt")
         # Retrieve text
@@ -150,19 +52,17 @@ class Scheduler:
             r"(\d+) ([a-zA-Z]+), (\d+), (\d\d:\d\d) ([a-zA-Z]+)",
             text_wrapper.text
         )[0]
-        # Parse text
         month = get_month_int(month_name)
-        # Store in attribute
         self.current_appointment = Appointment(int(day), month, int(year), time, city)
         logger.info("Current appointment: %s", self.current_appointment)
 
     def navigate_reschedule_page(self):
+        """Expand appropriate section and click CTAs to open the rescheduling page."""
         # Click "continue" CTA
         self.select_element(
             "div.application:nth-child(1) > div:nth-child(1) > div:nth-child(2) "
             "> ul:nth-child(1) > li:nth-child(1) > a:nth-child(1)"
         )
-        # Wait for redirection
         wait_page_load()
 
         # Expand "reschedule" section
@@ -172,15 +72,58 @@ class Scheduler:
             "li.accordion-item:nth-child(4) > div:nth-child(2) > div:nth-child(1) "
             "> div:nth-child(2) > p:nth-child(2) > a:nth-child(1)"
         )
-        # Wait for redirection
         wait_page_load()
 
+    def find_json_request(self, city) -> t.Optional[Request]:
+        """Traverse requests list multiple times to find the JSON response,
+        which contains the avaialble dates.
+        """
+        wait_request()
+        request = self.driver.requests[0]
+        i = 0
+        search_count = 0
+        while ".json" not in request.path:
+            i += 1
+            if i >= len(self.driver.requests):
+                wait_request()
+                i = 0
+                search_count += 1
+
+                if search_count > MAX_REQUEST_SEARCHES:
+                    logger.error("JSON request not found for %s", city)
+                    return
+
+            request = self.driver.requests[i]
+        return request
+
+    def validate_candidate(
+        self, new_best_date, candidate, candidate_repr, city
+    ) -> bool:
+        """Ensure candidate for new best date is sooner than the best ones so far."""
+        if is_prod() and candidate >= self.current_appointment.date:
+            logger.info(
+                "Best date for %s ignored: %s (later than existing appointment)",
+                city, candidate_repr
+            )
+            return False
+
+        if new_best_date and candidate >= new_best_date:
+            logger.info(
+                "Best date for %s ignored: %s (later than new best date)",
+                city, candidate_repr
+            )
+            return False
+        return True
+
     def get_best_date(self):
-        # Find dropdown of cities
+        """Find the soonest available date among all cities."""
+        self.new_appointment = None
+        new_best_date = None
+
         city_select_element = self.select_element(
             "appointments_consulate_appointment_facility_id")
         city_select = Select(city_select_element)
-        new_best_date = None
+
         for option in city_select.options:
             if not option.text:
                 continue
@@ -198,25 +141,9 @@ class Scheduler:
                 continue
 
             wait_request()
-            request = self.driver.requests[0]
-            i = 0
-            count = 0
-            error = False
-            while ".json" not in request.path:
-                i += 1
-                if i >= len(self.driver.requests):
-                    wait_request()
-                    i = 0
-                    count += 1
+            request = self.find_json_request(option.text)
 
-                    if count > 2:
-                        logger.error(f"JSON request not found for {option.text}")
-                        error = True
-                        break
-
-                request = self.driver.requests[i]
-
-            if error:
+            if not request:
                 continue
 
             # Get first date
@@ -225,21 +152,10 @@ class Scheduler:
 
             year, month, day = list(map(int, candidate_repr.split("-")))
             candidate = datetime.date(year, month, day)
-
-            if is_prod() and candidate >= self.current_appointment.date:
-                logger.info(
-                    "Best date for %s ignored: %s (later than existing appointment)",
-                    option.text, candidate_repr
-                )
+            if not self.validate_candidate(
+                new_best_date, candidate, candidate_repr, option.text
+            ):
                 continue
-
-            if new_best_date and candidate >= new_best_date:
-                logger.info(
-                    "Best date for %s ignored: %s (later than new best date)",
-                    option.text, candidate_repr
-                )
-                continue
-
             new_best_date = candidate
             self.new_appointment = Appointment(day, month, year, "", option.text)
 
@@ -288,4 +204,3 @@ class Scheduler:
         self.get_best_date()
         if self.new_appointment:
             self.execute_reschedule()
-        return
