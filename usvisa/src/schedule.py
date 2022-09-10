@@ -1,11 +1,13 @@
 """Provide scheduling utility scripts."""
 import datetime
 import logging
+import random
 import re
 
 import seleniumwire
 from selenium import webdriver
 from selenium.common import ElementNotInteractableException, NoSuchElementException
+from selenium.webdriver import Keys
 from selenium.webdriver.chrome.options import Options
 
 from selenium.webdriver.common.by import By
@@ -15,13 +17,13 @@ from seleniumwire import undetected_chromedriver
 from seleniumwire.undetected_chromedriver import ChromeOptions
 
 from usvisa.src.constants import (
-    BY_TYPE_ORDER, DEFAULT_USERAGENT,
+    BY_TYPE_ORDER, CITY_NAME_ID_MAP, DEFAULT_USERAGENT,
     DEFAULT_WEBDRIVER_CLASS, LOGIN_URL
 )
 from usvisa.src.utils import (
     delayed, get_credentials, get_month_int, get_dict_response, get_user_agent,
     hibernate,
-    quick_sleep, wait_page_load, wait_request
+    is_prod, quick_sleep, wait_page_load, wait_request
 )
 
 logger = logging.getLogger()
@@ -66,11 +68,13 @@ class Scheduler:
             options = Options()
             options.add_argument(f"user-agent={user_agent}")
             driver_kwargs["chrome_options"] = options
+            driver_kwargs["service_log_path"] = "/dev/null"
         elif self._WEBDRIVER_CLASS == undetected_chromedriver.Chrome:
             options = ChromeOptions()
             options.add_argument(f"user-agent={user_agent}")
             driver_kwargs["options"] = options
             driver_kwargs["seleniumwire_options"] = {}
+            driver_kwargs["service_log_path"] = "/dev/null"
         elif self._WEBDRIVER_CLASS == webdriver.Firefox:
             profile = webdriver.FirefoxProfile()
             profile.set_preference("general.user_agent.override", user_agent)
@@ -104,6 +108,11 @@ class Scheduler:
             except ElementNotInteractableException:
                 return None
             return element
+
+    def select_random_element(self, selector_choices) -> WebElement:
+        """Run select_element() with a randomly-chosen seelctor."""
+        selector = random.choice(selector_choices)
+        return self.select_element(selector)
 
     @delayed
     def write_input(self, element: WebElement, text: str):
@@ -145,7 +154,7 @@ class Scheduler:
         month = get_month_int(month_name)
         # Store in attribute
         self.current_appointment = Appointment(int(day), month, int(year), time, city)
-        logger.info(f"Current appointment: {self.current_appointment}")
+        logger.info("Current appointment: %s", self.current_appointment)
 
     def navigate_reschedule_page(self):
         # Click "continue" CTA
@@ -168,18 +177,24 @@ class Scheduler:
 
     def get_best_date(self):
         # Find dropdown of cities
-        city_select = Select(
-            self.select_element("appointments_consulate_appointment_facility_id")
-        )
+        city_select_element = self.select_element(
+            "appointments_consulate_appointment_facility_id")
+        city_select = Select(city_select_element)
         new_best_date = None
         for option in city_select.options:
+            if not option.text:
+                continue
+
+            # Set clean slate / in case of "continue", close the calendar
+            city_select_element.send_keys(Keys.ESCAPE)
             del self.driver.requests
 
             city_select.select_by_value(option.get_attribute("value"))
-            date_select = self.select_element("appointments_consulate_appointment_date")
+            date_select = self.select_element(
+                "appointments_consulate_appointment_date")
             if not date_select:
                 # No dates for selected city
-                logger.info(f"No dates for {option.text}")
+                logger.info("No dates for %s", option.text)
                 continue
 
             wait_request()
@@ -204,34 +219,43 @@ class Scheduler:
             if error:
                 continue
 
-            # get first date
+            # Get first date
             response = get_dict_response(request)
-            first_date_repr = response[0]["date"]
+            candidate_repr = response[0]["date"]
 
-            year, month, day = list(map(int, first_date_repr.split("-")))
-            first_date = datetime.date(year, month, day)
+            year, month, day = list(map(int, candidate_repr.split("-")))
+            candidate = datetime.date(year, month, day)
 
-            # TODO: uncomment
-            # if first_date >= self.current_appointment.date:
-            #     logger.info(f"Best date for {option.text} ignored: {first_date_repr} (later than existing appointment)")
-            #     continue
-            if new_best_date and first_date >= new_best_date:
-                logger.info(f"Best date for {option.text} ignored: {first_date_repr} (later than new best date)")
+            if is_prod() and candidate >= self.current_appointment.date:
+                logger.info(
+                    "Best date for %s ignored: %s (later than existing appointment)",
+                    option.text, candidate_repr
+                )
                 continue
-            else:
-                new_best_date = first_date
+
+            if new_best_date and candidate >= new_best_date:
+                logger.info(
+                    "Best date for %s ignored: %s (later than new best date)",
+                    option.text, candidate_repr
+                )
+                continue
+
+            new_best_date = candidate
             self.new_appointment = Appointment(day, month, year, "", option.text)
 
-        # TODO: Select best city again
-
-        # Select date in calendar
+            logger.info("New best date found: %s", self.new_appointment)
 
         return self.new_appointment
 
     def execute_reschedule(self):
-        # TODO: Find dropdown of cities
-        # TODO: Select self.new_appointment.city
-        # Select best date
+        """Select the info for the best appointment found."""
+        city_select = Select(
+            self.select_element("appointments_consulate_appointment_facility_id")
+        )
+        city_select.select_by_value(CITY_NAME_ID_MAP[self.new_appointment.city])
+
+        # Select soonest date in calendar
+        self.select_element("appointments_consulate_appointment_date")
         free_date_cell_key = ".ui-state-default[href]"
         free_date_cell = self.find_element(By.CSS_SELECTOR, free_date_cell_key)
 
@@ -241,16 +265,27 @@ class Scheduler:
 
         quick_sleep()
         free_date_cell.click()
-        return
+
+        # Pick latest time
+        time_select = Select(
+            self.select_element("appointments_consulate_appointment_time")
+        )
+        option = time_select.options[-1]
+        time_select.select_by_value(option.get_attribute("value"))
+
+        if is_prod():
+            self.select_element("appointments_consulate_appointment_submit")
 
     def reschedule_sooner(self):
+        """Run all the actions necessary to login and reschedule the appointment
+        to a date that is sooner than the currently scheduled appointment.
+        """
         logger.debug("> reschedule_sooner")
         self.navigate_login_page()
         self.execute_login()
         self.get_current_appointment()
         self.navigate_reschedule_page()
         self.get_best_date()
-        hibernate()
         if self.new_appointment:
             self.execute_reschedule()
         return

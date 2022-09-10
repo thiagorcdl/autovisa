@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+
 """Run main logic by calling the appropriate modules."""
 
 import logging

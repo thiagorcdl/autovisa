@@ -87,14 +87,26 @@ def get_dict_response(request) -> list:
 
 
 @lru_cache
-def is_testing() -> bool:
-    """Check whether current instance is for testing."""
+def is_env(env_var_name: str) -> bool:
+    """Check whether environment variable yields True."""
     falsy_strings = ["", "0", "false", "no"]
-    env_variable = os.environ.get("TEST", "")
-    if env_variable.lower() in falsy_strings:
+    value = os.environ.get(env_var_name, "")
+    if value.lower() in falsy_strings:
         return False
 
-    return bool(env_variable)
+    return bool(value)
+
+
+@lru_cache
+def is_prod() -> bool:
+    """Check whether current instance is for production."""
+    return is_env("PRODUCTION")
+
+
+@lru_cache
+def is_testing() -> bool:
+    """Check whether current instance is for testing."""
+    return is_env("TEST")
 
 
 @lru_cache

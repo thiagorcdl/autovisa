@@ -31,3 +31,13 @@ TEST_USERAGENT = (
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) "
     "Chrome/51.0.2704.103 Safari/537.36"
 )
+
+CITY_NAME_ID_MAP = {
+    "Calgary": "89",
+    "Halifax": "90",
+    "Montreal": "91",
+    "Ottawa": "92",
+    "Quebec City": "93",
+    "Toronto": "94",
+    "Vancouver": "95",
+}
