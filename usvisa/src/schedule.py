@@ -5,17 +5,15 @@ import re
 import typing as t
 
 from selenium.webdriver import Keys
-
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.select import Select
 from seleniumwire.request import Request
 
 from usvisa.src.appointment import Appointment
 from usvisa.src.constants import CITY_NAME_ID_MAP, MAX_REQUEST_SEARCHES
-
 from usvisa.src.utils import (
     get_credentials, get_month_int, get_dict_response,
-    is_prod, quick_sleep, wait_page_load, wait_request
+    is_prod, long_sleep, quick_sleep, wait_page_load, wait_request
 )
 from usvisa.src.webdriver import WebDriver
 
@@ -31,17 +29,17 @@ class Scheduler(WebDriver):
         """Fill in credentials, consent to privacy policity and try logging in."""
         email, password = get_credentials()
 
-        email_input = self.select_element("user_email")
+        email_input = self.slow_select_element("user_email")
         self.write_input(email_input, email)
 
-        password_input = self.select_element("user_password")
+        password_input = self.slow_select_element("user_password")
         self.write_input(password_input, password)
 
         # Consent to privacy policy
-        self.select_element(".icheckbox")
+        self.slow_select_element(".icheckbox")
 
         # Click CTA
-        self.select_element("commit")
+        self.slow_select_element("commit")
 
     def get_current_appointment(self):
         """Parse raw text in page and store new Appointment instance."""
@@ -59,16 +57,16 @@ class Scheduler(WebDriver):
     def navigate_reschedule_page(self):
         """Expand appropriate section and click CTAs to open the rescheduling page."""
         # Click "continue" CTA
-        self.select_element(
+        self.slow_select_element(
             "div.application:nth-child(1) > div:nth-child(1) > div:nth-child(2) "
             "> ul:nth-child(1) > li:nth-child(1) > a:nth-child(1)"
         )
         wait_page_load()
 
         # Expand "reschedule" section
-        self.select_element("li.accordion-item:nth-child(4) > a:nth-child(1)")
+        self.slow_select_element("li.accordion-item:nth-child(4) > a:nth-child(1)")
         # Click "reschedule" CTA
-        self.select_element(
+        self.slow_select_element(
             "li.accordion-item:nth-child(4) > div:nth-child(2) > div:nth-child(1) "
             "> div:nth-child(2) > p:nth-child(2) > a:nth-child(1)"
         )
@@ -120,7 +118,7 @@ class Scheduler(WebDriver):
         self.new_appointment = None
         new_best_date = None
 
-        city_select_element = self.select_element(
+        city_select_element = self.slow_select_element(
             "appointments_consulate_appointment_facility_id")
         city_select = Select(city_select_element)
 
@@ -133,7 +131,7 @@ class Scheduler(WebDriver):
             del self.driver.requests
 
             city_select.select_by_value(option.get_attribute("value"))
-            date_select = self.select_element(
+            date_select = self.slow_select_element(
                 "appointments_consulate_appointment_date")
             if not date_select:
                 # No dates for selected city
@@ -166,17 +164,17 @@ class Scheduler(WebDriver):
     def execute_reschedule(self):
         """Select the info for the best appointment found."""
         city_select = Select(
-            self.select_element("appointments_consulate_appointment_facility_id")
+            self.slow_select_element("appointments_consulate_appointment_facility_id")
         )
         city_select.select_by_value(CITY_NAME_ID_MAP[self.new_appointment.city])
 
         # Select soonest date in calendar
-        self.select_element("appointments_consulate_appointment_date")
+        self.slow_select_element("appointments_consulate_appointment_date")
         free_date_cell_key = ".ui-state-default[href]"
         free_date_cell = self.find_element(By.CSS_SELECTOR, free_date_cell_key)
 
         while not free_date_cell:
-            self.select_element(".ui-datepicker-next")
+            self.quick_select_element(".ui-datepicker-next")
             free_date_cell = self.find_element(By.CSS_SELECTOR, free_date_cell_key)
 
         quick_sleep()
@@ -184,13 +182,13 @@ class Scheduler(WebDriver):
 
         # Pick latest time
         time_select = Select(
-            self.select_element("appointments_consulate_appointment_time")
+            self.slow_select_element("appointments_consulate_appointment_time")
         )
         option = time_select.options[-1]
         time_select.select_by_value(option.get_attribute("value"))
 
         if is_prod():
-            self.select_element("appointments_consulate_appointment_submit")
+            self.slow_select_element("appointments_consulate_appointment_submit")
 
     def reschedule_sooner(self):
         """Run all the actions necessary to login and reschedule the appointment
@@ -201,6 +199,13 @@ class Scheduler(WebDriver):
         self.execute_login()
         self.get_current_appointment()
         self.navigate_reschedule_page()
+
         self.get_best_date()
-        if self.new_appointment:
-            self.execute_reschedule()
+
+        while not self.new_appointment:
+            long_sleep()
+            self.get_best_date()
+
+        self.execute_reschedule()
+        self.current_appointment = self.new_appointment
+        self.new_appointment = None

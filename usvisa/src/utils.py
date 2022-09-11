@@ -8,12 +8,12 @@ import time
 from functools import lru_cache, wraps
 
 from seleniumwire.request import Request
+from seleniumwire.utils import decode
 
 from usvisa.src.constants import (
     DEFAULT_USERAGENT, MAX_ACTION_SLEEP, MIN_ACTION_SLEEP,
     TEST_LOGIN, TEST_PWD, TEST_USERAGENT
 )
-from seleniumwire.utils import decode
 
 logger = logging.getLogger()
 
@@ -27,6 +27,20 @@ def delayed(function):
         """Add delay and execute wrapped function."""
         logger.debug(f">>> delayed wrapper")
         rand_sleep()
+        return function(*args, **kwargs)
+
+    return wrapper
+
+
+def quick_delayed(function):
+    """Decorate function to add a quick delay before taking action."""
+    logger.debug(f">> quick_delayed decorator")
+
+    @wraps(function)
+    def wrapper(*args, **kwargs):
+        """Add delay and execute wrapped function."""
+        logger.debug(f">>> quick_delayed wrapper")
+        quick_sleep()
         return function(*args, **kwargs)
 
     return wrapper
@@ -50,13 +64,13 @@ def quick_sleep():
 
 
 def long_sleep():
-    """Sleep for some time, more than 3 seconds."""
-    return rand_sleep(min_sleep=3, max_sleep=6)
+    """Sleep for some time, more than 10 seconds."""
+    return rand_sleep(min_sleep=10, max_sleep=20)
 
 
 def hibernate():
-    """Sleep for a very long time, more than 2 minutes."""
-    return rand_sleep(min_sleep=60 * 2, max_sleep=60 * 3)
+    """Sleep for a very long time, more than 5 minutes."""
+    return rand_sleep(min_sleep=60 * 5, max_sleep=60 * 10)
 
 
 def wait_page_load():

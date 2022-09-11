@@ -1,23 +1,22 @@
-import random
 import logging
+import random
+import typing as t
 
 import seleniumwire
 from selenium import webdriver
 from selenium.common import ElementNotInteractableException, NoSuchElementException
-from selenium.webdriver.chrome.options import Options
-
-from selenium.webdriver.remote.webelement import WebElement
 from seleniumwire import undetected_chromedriver
 from seleniumwire.undetected_chromedriver import ChromeOptions
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.remote.webelement import WebElement
 
-from usvisa.src.appointment import Appointment
 from usvisa.src.constants import (
     BY_TYPE_ORDER,
     DEFAULT_WEBDRIVER_CLASS, LOGIN_URL
 )
 from usvisa.src.utils import (
     delayed, get_user_agent,
-    quick_sleep
+    quick_delayed, quick_sleep
 )
 
 logger = logging.getLogger()
@@ -41,13 +40,11 @@ class WebDriver:
             options = Options()
             options.add_argument(f"user-agent={user_agent}")
             driver_kwargs["chrome_options"] = options
-            driver_kwargs["service_log_path"] = "/dev/null"
         elif self._WEBDRIVER_CLASS == undetected_chromedriver.Chrome:
             options = ChromeOptions()
             options.add_argument(f"user-agent={user_agent}")
             driver_kwargs["options"] = options
             driver_kwargs["seleniumwire_options"] = {}
-            driver_kwargs["service_log_path"] = "/dev/null"
         elif self._WEBDRIVER_CLASS == webdriver.Firefox:
             profile = webdriver.FirefoxProfile()
             profile.set_preference("general.user_agent.override", user_agent)
@@ -66,8 +63,7 @@ class WebDriver:
         except NoSuchElementException as err:
             pass
 
-    @delayed
-    def select_element(self, key: str) -> WebElement:
+    def instant_select_element(self, key: str) -> t.Optional[WebElement]:
         """Find and click element."""
         logger.debug(f"> select_element")
         for by_type in BY_TYPE_ORDER:
@@ -82,10 +78,20 @@ class WebDriver:
                 return None
             return element
 
-    def select_random_element(self, selector_choices) -> WebElement:
+    @delayed
+    def slow_select_element(self, key: str) -> t.Optional[WebElement]:
+        """Find and click element."""
+        return self.instant_select_element(key)
+
+    @quick_delayed
+    def quick_select_element(self, key: str) -> t.Optional[WebElement]:
+        """Find and click element."""
+        return self.instant_select_element(key)
+
+    def select_random_element(self, selector_choices) -> t.Optional[WebElement]:
         """Run select_element() with a randomly-chosen seelctor."""
         selector = random.choice(selector_choices)
-        return self.select_element(selector)
+        return self.slow_select_element(selector)
 
     @delayed
     def write_input(self, element: WebElement, text: str):
