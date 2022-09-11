@@ -10,7 +10,10 @@ from selenium.webdriver.support.select import Select
 from seleniumwire.request import Request
 
 from autovisa.src.appointment import Appointment
-from autovisa.src.constants import CITY_NAME_ID_MAP, MAX_REQUEST_SEARCHES
+from autovisa.src.constants import (
+    CITY_NAME_ID_MAP, EXCLUDE_DATE_END, EXCLUDE_DATE_START,
+    MAX_REQUEST_SEARCHES
+)
 from autovisa.src.utils import (
     get_credentials, get_month_int, get_dict_response,
     is_prod, long_sleep, quick_sleep, wait_page_load, wait_request
@@ -111,6 +114,13 @@ class Scheduler(WebDriver):
                 city, candidate_repr
             )
             return False
+
+        if EXCLUDE_DATE_START <= new_best_date <= EXCLUDE_DATE_END:
+            logger.info(
+                "Best date for %s ignored: %s (within exclude date range)",
+                city, candidate_repr
+            )
+            return False
         return True
 
     def get_best_date(self):
@@ -157,7 +167,7 @@ class Scheduler(WebDriver):
             new_best_date = candidate
             self.new_appointment = Appointment(day, month, year, "", option.text)
 
-            logger.info("New best date found: %s", self.new_appointment)
+            logger.info("//// New best date found: %s", self.new_appointment)
 
         return self.new_appointment
 
@@ -187,8 +197,11 @@ class Scheduler(WebDriver):
         option = time_select.options[-1]
         time_select.select_by_value(option.get_attribute("value"))
 
+        self.slow_select_element("appointments_consulate_appointment_submit")
         if is_prod():
-            self.slow_select_element("appointments_consulate_appointment_submit")
+            # Confirm modal
+            self.slow_select_element(
+                "body > div.reveal-overlay > div > div > a.button.alert")
 
     def reschedule_sooner(self):
         """Run all the actions necessary to login and reschedule the appointment
@@ -203,7 +216,9 @@ class Scheduler(WebDriver):
         self.get_best_date()
 
         while not self.new_appointment:
+            logger.info("... No good appointments found.")
             long_sleep()
+            logger.info("... Checking cities again.")
             self.get_best_date()
 
         self.execute_reschedule()

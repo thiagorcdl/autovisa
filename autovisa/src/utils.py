@@ -55,6 +55,7 @@ def rand_sleep(min_sleep=MIN_ACTION_SLEEP, max_sleep=MAX_ACTION_SLEEP):
 
     sleep_duration = float(random.randint(min_sleep, max_sleep))
     sleep_duration += random.random() / 2  # Add decimal to prevent always integer
+    logger.debug("> sleeping for %f seconds", sleep_duration)
     time.sleep(sleep_duration)
 
 

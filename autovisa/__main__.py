@@ -14,10 +14,11 @@ if __name__ == "__main__":
 
     while True:
         logger.info("=" * 80)
-        logger.info("Initiating new instance at %s", datetime.datetime.now())
+        logger.info("/ Initiating new instance at %s", datetime.datetime.now())
         scheduler = schedule.Scheduler()
         try:
             scheduler.reschedule_sooner()
         except Exception as err:
             logger.error(str(err), exc_info=err)
+        logger.info("... Hibernating at %s", datetime.datetime.now())
         hibernate()

@@ -1,4 +1,5 @@
 """Store default values."""
+import datetime
 import logging
 
 from selenium.webdriver.common.by import By
@@ -33,6 +34,9 @@ CITY_NAME_ID_MAP = {
 }
 
 MAX_REQUEST_SEARCHES = 2
+
+EXCLUDE_DATE_START = datetime.date(2022, 11, 15)
+EXCLUDE_DATE_END = datetime.date(2022, 12, 1)
 
 # --- Constants for testing --- #
 
