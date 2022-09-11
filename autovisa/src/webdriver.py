@@ -10,11 +10,11 @@ from seleniumwire.undetected_chromedriver import ChromeOptions
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.remote.webelement import WebElement
 
-from usvisa.src.constants import (
+from autovisa.src.constants import (
     BY_TYPE_ORDER,
     DEFAULT_WEBDRIVER_CLASS, LOGIN_URL
 )
-from usvisa.src.utils import (
+from autovisa.src.utils import (
     delayed, get_user_agent,
     quick_delayed, quick_sleep
 )

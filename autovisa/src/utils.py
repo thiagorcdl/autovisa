@@ -10,7 +10,7 @@ from functools import lru_cache, wraps
 from seleniumwire.request import Request
 from seleniumwire.utils import decode
 
-from usvisa.src.constants import (
+from autovisa.src.constants import (
     DEFAULT_USERAGENT, MAX_ACTION_SLEEP, MIN_ACTION_SLEEP,
     TEST_LOGIN, TEST_PWD, TEST_USERAGENT
 )
@@ -130,8 +130,8 @@ def get_credentials() -> tuple:
         login = TEST_LOGIN
         password = TEST_PWD
     else:
-        login = os.environ.get("USVISA_LOGIN")
-        password = os.environ.get("USVISA_PWD")
+        login = os.environ.get("VISA_EMAIL")
+        password = os.environ.get("VISA_PASSWORD")
 
         if not login and password:
             raise ValueError("Missing credentials")

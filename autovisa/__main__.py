@@ -1,9 +1,9 @@
 """Run main logic by calling the appropriate modules."""
 import datetime
 import logging
-from usvisa import schedule
-from usvisa.src import LOGGING_LEVEL
-from usvisa.src.utils import hibernate
+from autovisa import schedule
+from autovisa.src import LOGGING_LEVEL
+from autovisa.src.utils import hibernate
 
 if __name__ == "__main__":
     logging.basicConfig()

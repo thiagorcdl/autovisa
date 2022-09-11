@@ -1,4 +1,4 @@
-"""Provide scheduling utility scripts."""
+"""Provide class for scheduling visa."""
 import datetime
 import logging
 import re
@@ -9,19 +9,19 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.select import Select
 from seleniumwire.request import Request
 
-from usvisa.src.appointment import Appointment
-from usvisa.src.constants import CITY_NAME_ID_MAP, MAX_REQUEST_SEARCHES
-from usvisa.src.utils import (
+from autovisa.src.appointment import Appointment
+from autovisa.src.constants import CITY_NAME_ID_MAP, MAX_REQUEST_SEARCHES
+from autovisa.src.utils import (
     get_credentials, get_month_int, get_dict_response,
     is_prod, long_sleep, quick_sleep, wait_page_load, wait_request
 )
-from usvisa.src.webdriver import WebDriver
+from autovisa.src.webdriver import WebDriver
 
 logger = logging.getLogger()
 
 
 class Scheduler(WebDriver):
-    """Class for encapsulating busines slogic for scheduling interviews."""
+    """Class for encapsulating business logic for scheduling interviews."""
     current_appointment: t.Optional[Appointment] = None
     new_appointment: t.Optional[Appointment] = None
 

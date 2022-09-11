@@ -1,5 +1,6 @@
-"""Hold default values."""
+"""Store default values."""
 import logging
+
 from selenium.webdriver.common.by import By
 from seleniumwire import undetected_chromedriver
 
@@ -33,7 +34,7 @@ CITY_NAME_ID_MAP = {
 
 MAX_REQUEST_SEARCHES = 2
 
-# Test constants
+# --- Constants for testing --- #
 
 TEST_LOGIN = "jerrymtc98@hotmail.com"
 TEST_PWD = "qwerty1234qwerty"
