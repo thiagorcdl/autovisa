@@ -38,6 +38,8 @@ MAX_REQUEST_SEARCHES = 2
 EXCLUDE_DATE_START = datetime.date(2022, 11, 15)
 EXCLUDE_DATE_END = datetime.date(2022, 12, 1)
 
+ALLOWED_CITY_IDS = ["89", "92", "94"]
+
 # --- Constants for testing --- #
 
 TEST_LOGIN = "jerrymtc98@hotmail.com"

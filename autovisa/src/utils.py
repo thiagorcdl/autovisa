@@ -65,8 +65,8 @@ def quick_sleep():
 
 
 def long_sleep():
-    """Sleep for some time, more than 15 seconds."""
-    return rand_sleep(min_sleep=15, max_sleep=25)
+    """Sleep for some time, more than 1 minute."""
+    return rand_sleep(min_sleep=60, max_sleep=60 * 2)
 
 
 def hibernate():

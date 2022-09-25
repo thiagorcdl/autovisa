@@ -11,7 +11,7 @@ from seleniumwire.request import Request
 
 from autovisa.src.appointment import Appointment
 from autovisa.src.constants import (
-    CITY_NAME_ID_MAP, EXCLUDE_DATE_END, EXCLUDE_DATE_START,
+    ALLOWED_CITY_IDS, CITY_NAME_ID_MAP, EXCLUDE_DATE_END, EXCLUDE_DATE_START,
     MAX_REQUEST_SEARCHES
 )
 from autovisa.src.utils import (
@@ -133,14 +133,15 @@ class Scheduler(WebDriver):
         city_select = Select(city_select_element)
 
         for option in city_select.options:
-            if not option.text:
+            city_id = option.get_attribute("value")
+            if city_id not in ALLOWED_CITY_IDS:
                 continue
 
             # Set clean slate / in case of "continue", close the calendar
             city_select_element.send_keys(Keys.ESCAPE)
             del self.driver.requests
 
-            city_select.select_by_value(option.get_attribute("value"))
+            city_select.select_by_value(city_id)
             date_select = self.slow_select_element(
                 "appointments_consulate_appointment_date")
             if not date_select:
