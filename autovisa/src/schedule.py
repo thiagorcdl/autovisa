@@ -98,19 +98,12 @@ class Scheduler(WebDriver):
         return request
 
     def validate_candidate(
-        self, new_best_date, candidate, candidate_repr, city
+        self, candidate, candidate_repr, city
     ) -> bool:
         """Ensure candidate for new best date is sooner than the best ones so far."""
         if is_prod() and candidate >= self.current_appointment.date:
             logger.info(
                 "Best date for %s ignored: %s (later than existing appointment)",
-                city, candidate_repr
-            )
-            return False
-
-        if new_best_date and candidate >= new_best_date:
-            logger.info(
-                "Best date for %s ignored: %s (later than new best date)",
                 city, candidate_repr
             )
             return False
@@ -126,7 +119,6 @@ class Scheduler(WebDriver):
     def get_best_date(self):
         """Find the soonest available date among all cities."""
         self.new_appointment = None
-        new_best_date = None
 
         city_select_element = self.slow_select_element(
             "appointments_consulate_appointment_facility_id")
@@ -162,15 +154,13 @@ class Scheduler(WebDriver):
             year, month, day = list(map(int, candidate_repr.split("-")))
             candidate = datetime.date(year, month, day)
             if not self.validate_candidate(
-                new_best_date, candidate, candidate_repr, option.text
+                candidate, candidate_repr, option.text
             ):
                 continue
-            new_best_date = candidate
             self.new_appointment = Appointment(day, month, year, "", option.text)
 
             logger.info("//// New best date found: %s", self.new_appointment)
-
-        return self.new_appointment
+            return self.new_appointment
 
     def execute_reschedule(self):
         """Select the info for the best appointment found."""
