@@ -115,7 +115,7 @@ class Scheduler(WebDriver):
             )
             return False
 
-        if EXCLUDE_DATE_START <= new_best_date <= EXCLUDE_DATE_END:
+        if EXCLUDE_DATE_START <= candidate <= EXCLUDE_DATE_END:
             logger.info(
                 "Best date for %s ignored: %s (within exclude date range)",
                 city, candidate_repr
