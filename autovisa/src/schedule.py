@@ -8,7 +8,6 @@ from selenium.webdriver import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.select import Select
 from seleniumwire.request import Request
-from undetected_chromedriver.webelement import WebElement
 
 from autovisa.src.appointment import Appointment
 from autovisa.src.constants import (
@@ -17,7 +16,7 @@ from autovisa.src.constants import (
 )
 from autovisa.src.utils import (
     get_credentials, get_month_int, get_dict_response,
-    get_person_id, is_prod, long_sleep, quick_sleep, wait_page_load, wait_request
+    is_prod, long_sleep, quick_sleep, rand_sleep, wait_page_load, wait_request
 )
 from autovisa.src.webdriver import WebDriver
 
@@ -47,7 +46,7 @@ class Scheduler(WebDriver):
 
     def get_current_appointment(self):
         """Parse raw text in page and store new Appointment instance."""
-        quick_sleep()
+        rand_sleep(1, 2)
 
         # Find appointment element
         appointment_cards = self.driver.find_elements(
@@ -112,9 +111,10 @@ class Scheduler(WebDriver):
         self, candidate, candidate_repr, city
     ) -> bool:
         """Ensure candidate for new best date is sooner than the best ones so far."""
-        if is_prod() and candidate >= self.current_appointment.date:
+        if candidate >= self.current_appointment.date:
             logger.info(
-                "Best date for %s ignored: %s (later than existing appointment)",
+                "Best available date for %s ignored: %s "
+                "(later than existing appointment)",
                 city, candidate_repr
             )
             return False
