@@ -8,6 +8,7 @@ from selenium.webdriver import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.select import Select
 from seleniumwire.request import Request
+from undetected_chromedriver.webelement import WebElement
 
 from autovisa.src.appointment import Appointment
 from autovisa.src.constants import (
@@ -16,7 +17,7 @@ from autovisa.src.constants import (
 )
 from autovisa.src.utils import (
     get_credentials, get_month_int, get_dict_response,
-    is_prod, long_sleep, quick_sleep, wait_page_load, wait_request
+    get_person_id, is_prod, long_sleep, quick_sleep, wait_page_load, wait_request
 )
 from autovisa.src.webdriver import WebDriver
 
@@ -46,16 +47,26 @@ class Scheduler(WebDriver):
 
     def get_current_appointment(self):
         """Parse raw text in page and store new Appointment instance."""
+        quick_sleep()
+
         # Find appointment element
-        text_wrapper = self.driver.find_element(By.CSS_SELECTOR, ".consular-appt")
-        # Retrieve text
-        day, month_name, year, time, city = re.findall(
-            r"(\d+) ([a-zA-Z]+), (\d+), (\d\d:\d\d) ([a-zA-Z]+)",
-            text_wrapper.text
-        )[0]
-        month = get_month_int(month_name)
-        self.current_appointment = Appointment(int(day), month, int(year), time, city)
-        logger.info("Current appointment: %s", self.current_appointment)
+        appointment_cards = self.driver.find_elements(
+            By.CSS_SELECTOR,  ".application.attend_appointment"
+        )
+
+        for base_element in appointment_cards:
+            # TODO: create list of appointments and execute for all
+            text_wrapper = base_element.find_element(By.CSS_SELECTOR, ".consular-appt")
+            # Retrieve text
+            day, month_name, year, time, city = re.findall(
+                r"(\d+) ([a-zA-Z]+), (\d+), (\d\d:\d\d) ([a-zA-Z]+)",
+                text_wrapper.text
+            )[0]
+            month = get_month_int(month_name)
+            self.current_appointment = Appointment(
+                int(day), month, int(year), time, city
+            )
+            logger.info("Current appointment: %s", self.current_appointment)
 
     def navigate_reschedule_page(self):
         """Expand appropriate section and click CTAs to open the rescheduling page."""
@@ -116,7 +127,7 @@ class Scheduler(WebDriver):
             return False
         return True
 
-    def get_best_date(self):
+    def get_best_date(self) -> Appointment:
         """Find the soonest available date among all cities."""
         self.new_appointment = None
 
@@ -202,6 +213,11 @@ class Scheduler(WebDriver):
         self.navigate_login_page()
         self.execute_login()
         self.get_current_appointment()
+
+        if not self.current_appointment:
+            logger.error("No upcoming appointments found!")
+            return
+
         self.navigate_reschedule_page()
 
         self.get_best_date()

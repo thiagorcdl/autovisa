@@ -7,6 +7,8 @@ from seleniumwire import undetected_chromedriver
 
 LOGGING_LEVEL = logging.INFO
 
+FALSY_STRINGS = ["", "0", "false", "no"]
+
 MIN_ACTION_SLEEP = 1
 MAX_ACTION_SLEEP = 2
 
@@ -35,10 +37,10 @@ CITY_NAME_ID_MAP = {
 
 MAX_REQUEST_SEARCHES = 2
 
-EXCLUDE_DATE_START = datetime.date(2022, 11, 15)
-EXCLUDE_DATE_END = datetime.date(2022, 12, 1)
+EXCLUDE_DATE_START = datetime.date(2023, 5, 15)
+EXCLUDE_DATE_END = datetime.date(2023, 7, 15)
 
-ALLOWED_CITY_IDS = ["89", "92", "94"]
+ALLOWED_CITY_IDS = ["94"]
 
 # --- Constants for testing --- #
 

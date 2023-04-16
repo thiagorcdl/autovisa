@@ -11,7 +11,7 @@ from seleniumwire.request import Request
 from seleniumwire.utils import decode
 
 from autovisa.src.constants import (
-    DEFAULT_USERAGENT, MAX_ACTION_SLEEP, MIN_ACTION_SLEEP,
+    DEFAULT_USERAGENT, FALSY_STRINGS, MAX_ACTION_SLEEP, MIN_ACTION_SLEEP,
     TEST_LOGIN, TEST_PWD, TEST_USERAGENT
 )
 
@@ -102,14 +102,19 @@ def get_dict_response(request) -> list:
 
 
 @lru_cache
-def is_env(env_var_name: str) -> bool:
-    """Check whether environment variable yields True."""
-    falsy_strings = ["", "0", "false", "no"]
-    value = os.environ.get(env_var_name, "")
-    if value.lower() in falsy_strings:
+def is_truthy(value: str) -> bool:
+    """Check whether value yields True."""
+    if value.lower() in FALSY_STRINGS:
         return False
 
     return bool(value)
+
+
+@lru_cache
+def is_env(env_var_name: str) -> bool:
+    """Check whether environment variable yields True."""
+    value = os.environ.get(env_var_name, "")
+    return is_truthy(value)
 
 
 @lru_cache
@@ -134,10 +139,16 @@ def get_credentials() -> tuple:
         login = os.environ.get("VISA_EMAIL")
         password = os.environ.get("VISA_PASSWORD")
 
-        if not login and password:
+        if not (login and password):
             raise ValueError("Missing credentials")
 
     return login, password
+
+
+@lru_cache
+def get_person_id() -> str:
+    """Retrieve login and password from environment variables."""
+    return os.environ.get("PERSON_ID")
 
 
 def get_user_agent() -> str:
