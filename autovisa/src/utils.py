@@ -145,12 +145,6 @@ def get_credentials() -> tuple:
     return login, password
 
 
-@lru_cache
-def get_person_id() -> str:
-    """Retrieve login and password from environment variables."""
-    return os.environ.get("PERSON_ID")
-
-
 def get_user_agent() -> str:
     """Retrieve user agent string to be used in the webdriver."""
     return TEST_USERAGENT if is_testing() else DEFAULT_USERAGENT
