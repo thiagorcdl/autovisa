@@ -90,6 +90,15 @@ class Scheduler(WebDriver):
         which contains the avaialble dates.
         """
         wait_request()
+        request_wait_retries = 5
+        while request_wait_retries and not self.driver.requests:
+            request_wait_retries -= 1
+            wait_request()
+
+        if not self.driver.requests:
+            logger.error("JSON request not found for %s", city)
+            return
+
         request = self.driver.requests[0]
         i = 0
         search_count = 0
@@ -152,7 +161,6 @@ class Scheduler(WebDriver):
                 logger.info("No dates for %s", option.text)
                 continue
 
-            wait_request()
             request = self.find_json_request(option.text)
 
             if not request:
@@ -225,6 +233,9 @@ class Scheduler(WebDriver):
         while not self.new_appointment:
             logger.info("... No good appointments found.")
             long_sleep()
+            self.driver.refresh()
+            if "schedule" not in self.driver.current_url:
+                raise Exception("Session ended")
             logger.info("... Checking cities again.")
             self.get_best_date()
 
