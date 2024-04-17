@@ -17,7 +17,7 @@ if __name__ == "__main__":
         logger.info("/ Initiating new instance at %s", datetime.datetime.now())
         scheduler = schedule.Scheduler()
         try:
-            scheduler.reschedule_sooner()
+            scheduler.run_reschedule_suite()
         except Exception as err:
             logger.error(str(err), exc_info=err)
         logger.info("... Hibernating at %s", datetime.datetime.now())

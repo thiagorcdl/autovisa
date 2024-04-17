@@ -153,3 +153,12 @@ def get_user_agent() -> str:
 def get_month_int(month_name: str) -> int:
     """Map a month name (title formatting) to an integer (0-indexed)."""
     return list(calendar.month_name).index(month_name.title())
+
+
+def filter_out_empty(old_list: list) -> list:
+    """Return new list with only non-empty values."""
+    new_list = []
+    for item in old_list:
+        if item != "" and item is not None:
+            new_list.append(item)
+    return new_list

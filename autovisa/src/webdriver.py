@@ -57,7 +57,7 @@ class WebDriver:
 
     def find_element(self, by_type, key: str) -> WebElement:
         """Find element via defined "by" type."""
-        logger.debug(f"> find_element")
+        logger.debug("> find_element")
         try:
             return self.driver.find_element(by_type, key)
         except NoSuchElementException as err:
@@ -65,7 +65,7 @@ class WebDriver:
 
     def instant_select_element(self, key: str) -> t.Optional[WebElement]:
         """Find and click element."""
-        logger.debug(f"> select_element")
+        logger.debug("> select_element")
         for by_type in BY_TYPE_ORDER:
             element = self.find_element(by_type, key)
 
@@ -89,14 +89,14 @@ class WebDriver:
         return self.instant_select_element(key)
 
     def select_random_element(self, selector_choices) -> t.Optional[WebElement]:
-        """Run select_element() with a randomly-chosen seelctor."""
+        """Run select_element() with a randomly-chosen selector."""
         selector = random.choice(selector_choices)
         return self.slow_select_element(selector)
 
     @delayed
     def write_input(self, element: WebElement, text: str):
         """Send text to input element, character by character."""
-        logger.debug(f"> write_input")
+        logger.debug("> write_input")
 
         for char in text:
             quick_sleep()

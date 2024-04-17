@@ -17,12 +17,12 @@ Currently, the only cities listed are the ones in Canada.
 
 # TODO
 - [ ] Add unit tests
-- [ ] Add better support for multiple appointments
+- [x] Add better support for multiple appointments
+- [ ] Add better support for appointments with multiple applicants
 - [ ] Optionallly pass credentials via arguments / input password via CLI
 - [ ] Pass list of allowed cities via arguments
-- [ ] Pass acceptable date range via arguments
-- [ ] Pass allowed cities via arguments
   - [ ] Slugify city names 
+- [ ] Pass acceptable date range via arguments
 - [ ] Add support for other countries
   - [ ] Replace locale in `LOGIN_URL`
   - [ ] Add country's cities to `CITY_NAME_ID_MAP`
