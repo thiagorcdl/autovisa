@@ -12,7 +12,7 @@ from seleniumwire.request import Request
 from autovisa.src.appointment import Appointment
 from autovisa.src.constants import (
     ALLOWED_CITY_IDS, CITY_NAME_ID_MAP, EXCLUDE_DATE_END, EXCLUDE_DATE_START,
-    MAX_REQUEST_SEARCHES
+    LOGIN_URL, MAX_REQUEST_SEARCHES
 )
 from autovisa.src.utils import (
     get_credentials, get_month_int, get_dict_response,
@@ -29,11 +29,17 @@ class Scheduler(WebDriver):
     current_appointment: t.Optional[Appointment] = None
     new_appointment: t.Optional[Appointment] = None
 
+    def navigate_login_page(self):
+        logger.debug("> navigate_login_page")
+        self.driver.get(LOGIN_URL)
+        wait_page_load()
+
     def execute_login(self):
+        logger.debug("> execute_login")
         """Fill in credentials, consent to privacy policity and try logging in."""
         email, password = get_credentials()
 
-        email_input = self.slow_select_element("user_email")
+        email_input = self.quick_select_element("user_email")
         self.write_input(email_input, email)
 
         password_input = self.slow_select_element("user_password")
@@ -44,9 +50,11 @@ class Scheduler(WebDriver):
 
         # Click CTA
         self.slow_select_element("commit")
+        wait_page_load()
 
     def get_current_appointment_list(self, applicant_info=None):
         """Parse raw text in page and store new Appointment instances."""
+        logger.debug("> get_current_appointment_list")
         rand_sleep(1, 2)
 
         # Find appointment element
@@ -64,6 +72,7 @@ class Scheduler(WebDriver):
 
     def navigate_reschedule_page(self):
         """Expand appropriate section and click CTAs to open the rescheduling page."""
+        logger.debug("> navigate_reschedule_page")
         # Click "continue" CTA
         self.slow_select_element(f"a[href=\"{self.current_appointment.link}\"]")
         wait_page_load()
@@ -112,6 +121,7 @@ class Scheduler(WebDriver):
         self, candidate, candidate_repr, city
     ) -> bool:
         """Ensure candidate for new best date is sooner than the best ones so far."""
+        logger.debug(f"> validate_candidate {candidate}")
         if candidate >= self.current_appointment.date:
             logger.info(
                 "Best available date for %s ignored: %s "
@@ -130,6 +140,7 @@ class Scheduler(WebDriver):
 
     def get_best_date(self) -> Appointment:
         """Find the soonest available date among all cities."""
+        logger.debug("> get_best_date")
         if "schedule" not in self.driver.current_url:
             raise Exception("Session ended")
         self.new_appointment = None
@@ -177,6 +188,7 @@ class Scheduler(WebDriver):
 
     def execute_reschedule(self):
         """Select the info for the best appointment found."""
+        logger.debug("> execute_reschedule")
         city_select = Select(
             self.slow_select_element("appointments_consulate_appointment_facility_id")
         )
@@ -209,6 +221,7 @@ class Scheduler(WebDriver):
             )
 
     def reschedule_current_appointment(self):
+        logger.debug(f"> reschedule_current_appointment {self.current_appointment}")
         self.navigate_reschedule_page()
         self.get_best_date()
 
@@ -229,7 +242,7 @@ class Scheduler(WebDriver):
         """Run all the actions necessary to login and reschedule the appointment
         to a date that is sooner than the currently scheduled appointment.
         """
-        logger.debug("> reschedule_sooner")
+        logger.debug("> run_reschedule_suite")
         self.navigate_login_page()
         self.execute_login()
         self.get_current_appointment_list(applicant_info)

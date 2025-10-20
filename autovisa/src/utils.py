@@ -78,7 +78,7 @@ def wait_page_load():
     """Sleep for enough time for the webdriver to execute the action and page to
     reload.
     """
-    return time.sleep(2.5)
+    return rand_sleep(min_sleep=3, max_sleep=6)
 
 
 def wait_request():

@@ -12,7 +12,7 @@ from selenium.webdriver.remote.webelement import WebElement
 
 from autovisa.src.constants import (
     BY_TYPE_ORDER,
-    DEFAULT_WEBDRIVER_CLASS, LOGIN_URL
+    DEFAULT_WEBDRIVER_CLASS
 )
 from autovisa.src.utils import (
     delayed, get_user_agent,
@@ -39,21 +39,24 @@ class WebDriver:
         if self._WEBDRIVER_CLASS in (webdriver.Chrome, seleniumwire.webdriver.Chrome):
             options = Options()
             options.add_argument(f"user-agent={user_agent}")
+            options.add_argument('--ignore-ssl-errors=yes')
+            options.add_argument('--ignore-certificate-errors')
+            options.add_argument('--allow-insecure-localhost')
             driver_kwargs["chrome_options"] = options
         elif self._WEBDRIVER_CLASS == undetected_chromedriver.Chrome:
             options = ChromeOptions()
             options.add_argument(f"user-agent={user_agent}")
+            options.add_argument('--ignore-ssl-errors=yes')
+            options.add_argument('--ignore-certificate-errors')
+            options.add_argument('--allow-insecure-localhost')
             driver_kwargs["options"] = options
-            driver_kwargs["seleniumwire_options"] = {}
+            driver_kwargs["version_main"] = 122
         elif self._WEBDRIVER_CLASS == webdriver.Firefox:
             profile = webdriver.FirefoxProfile()
             profile.set_preference("general.user_agent.override", user_agent)
             driver_args.append(profile)
 
         return driver_args, driver_kwargs
-
-    def navigate_login_page(self):
-        self.driver.get(LOGIN_URL)
 
     def find_element(self, by_type, key: str) -> WebElement:
         """Find element via defined "by" type."""
