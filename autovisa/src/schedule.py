@@ -2,16 +2,19 @@
 import datetime
 import logging
 import typing as t
+from urllib.parse import urlparse
 
+from selenium.common import TimeoutException
 from selenium.webdriver import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.select import Select
+from selenium.webdriver.support.wait import WebDriverWait
 from seleniumwire.request import Request
 
 from autovisa.src.appointment import Appointment
 from autovisa.src.constants import (
     ALLOWED_CITY_IDS, CITY_NAME_ID_MAP, EXCLUDE_DATE_END, EXCLUDE_DATE_START,
-    LOGIN_URL, MAX_REQUEST_SEARCHES, LOGGER_NAME
+    LOGIN_URL, LOGGER_NAME
 )
 from autovisa.src.utils import (
     get_credentials, get_dict_response,
@@ -88,32 +91,23 @@ class Scheduler(WebDriver):
         """Traverse requests list multiple times to find the JSON response,
         which contains the available dates.
         """
+        logger.debug("> find_json_request")
         wait_request()
-        request_wait_retries = 5
-        while request_wait_retries and not self.driver.requests:
-            request_wait_retries -= 1
-            wait_request()
-
-        if not self.driver.requests:
+        try:
+            WebDriverWait(self.driver, 10).until(
+                lambda d: any(
+                    ".json" in urlparse(req.url).path
+                    and getattr(req, "response", None) is not None
+                    for req in d.requests
+                )
+            )
+        except TimeoutException:
             logger.error("JSON request not found for %s", city)
-            return
 
-        request = self.driver.requests[0]
-        i = 0
-        search_count = 0
-        while ".json" not in request.path:
-            i += 1
-            if i >= len(self.driver.requests):
-                wait_request()
-                i = 0
-                search_count += 1
-
-                if search_count > MAX_REQUEST_SEARCHES:
-                    logger.error("JSON request not found for %s", city)
-                    return
-
-            request = self.driver.requests[i]
-        return request
+        for request in self.driver.requests:
+            if ".json" in request.path or ".json" in request.url:
+                return request
+        return None
 
     def validate_candidate(
             self, candidate, candidate_repr, city
@@ -136,6 +130,33 @@ class Scheduler(WebDriver):
             return False
         return True
 
+    def choose_best_date_for_city(self, option_text):
+        date_select = self.slow_select_element(
+            "appointments_consulate_appointment_date")
+        if not date_select:
+            # No dates for selected city
+            logger.info("No dates for %s", option_text)
+            return
+
+        request = self.find_json_request(option_text)
+        if not request:
+            return
+
+        # Get first date
+        response = get_dict_response(request)
+        candidate_repr = response[0]["date"]
+
+        year, month, day = list(map(int, candidate_repr.split("-")))
+        candidate = datetime.date(year, month, day)
+        if not self.validate_candidate(
+                candidate, candidate_repr, option_text
+        ):
+            return
+        self.new_appointment = Appointment(day, month, year, "", option_text)
+
+        logger.info("//// New best date found: %s", self.new_appointment)
+        return self.new_appointment
+
     def get_best_date(self) -> Appointment:
         """Find the soonest available date among all cities."""
         logger.debug("> get_best_date")
@@ -144,46 +165,33 @@ class Scheduler(WebDriver):
             raise Exception("Session ended")
         self.new_appointment = None
 
+        outside_text = self.instant_select_element(".user-info-footer")
         city_select_element = self.slow_select_element(
             "appointments_consulate_appointment_facility_id")
         city_select = Select(city_select_element)
+        n_allowed_cities = len(ALLOWED_CITY_IDS)
+        if n_allowed_cities > 1:
+            for option in city_select.options:
+                city_id = option.get_attribute("value")
 
-        for option in city_select.options:
-            city_id = option.get_attribute("value")
-            if city_id not in ALLOWED_CITY_IDS:
-                continue
+                if city_id not in ALLOWED_CITY_IDS:
+                    continue
 
-            # Set clean slate / in case of "continue", close the calendar
-            city_select_element.send_keys(Keys.ESCAPE)
-            del self.driver.requests
+                # Set clean slate / in case of "continue", close the calendar
+                city_select_element.send_keys(Keys.ESCAPE)
+                outside_text.click()
+                city_select_element.click()
 
-            city_select.select_by_value(city_id)
-            date_select = self.slow_select_element(
-                "appointments_consulate_appointment_date")
-            if not date_select:
-                # No dates for selected city
-                logger.info("No dates for %s", option.text)
-                continue
+                del self.driver.requests
 
-            request = self.find_json_request(option.text)
-
-            if not request:
-                continue
-
-            # Get first date
-            response = get_dict_response(request)
-            candidate_repr = response[0]["date"]
-
-            year, month, day = list(map(int, candidate_repr.split("-")))
-            candidate = datetime.date(year, month, day)
-            if not self.validate_candidate(
-                    candidate, candidate_repr, option.text
-            ):
-                continue
-            self.new_appointment = Appointment(day, month, year, "", option.text)
-
-            logger.info("//// New best date found: %s", self.new_appointment)
-            return self.new_appointment
+                city_select.select_by_value(city_id)
+                new_appointment = self.choose_best_date_for_city(option.text)
+                if new_appointment:
+                    return new_appointment
+        elif n_allowed_cities == 1:
+            for city, city_id in CITY_NAME_ID_MAP.items():
+                if city_id == ALLOWED_CITY_IDS[0]:
+                    return self.choose_best_date_for_city(city)
 
     def execute_reschedule(self):
         """Select the info for the best appointment found."""
