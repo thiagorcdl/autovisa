@@ -5,7 +5,8 @@ import logging
 from selenium.webdriver.common.by import By
 from seleniumwire import undetected_chromedriver
 
-LOGGING_LEVEL = logging.DEBUG
+LOGGING_LEVEL = logging.INFO
+LOGGER_NAME = "autovisa"
 
 FALSY_STRINGS = ["", "0", "false", "no"]
 

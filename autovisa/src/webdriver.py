@@ -4,22 +4,23 @@ import typing as t
 
 import seleniumwire
 from selenium import webdriver
-from selenium.common import ElementNotInteractableException, NoSuchElementException
-from seleniumwire import undetected_chromedriver
-from seleniumwire.undetected_chromedriver import ChromeOptions
+from selenium.common import ElementNotInteractableException, NoSuchElementException, \
+    InvalidSelectorException
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.remote.webelement import WebElement
+from seleniumwire import undetected_chromedriver
+from seleniumwire.undetected_chromedriver import ChromeOptions
 
 from autovisa.src.constants import (
     BY_TYPE_ORDER,
-    DEFAULT_WEBDRIVER_CLASS
+    DEFAULT_WEBDRIVER_CLASS, LOGGER_NAME
 )
 from autovisa.src.utils import (
     delayed, get_user_agent,
     quick_delayed, quick_sleep
 )
 
-logger = logging.getLogger()
+logger = logging.getLogger(LOGGER_NAME)
 
 
 class WebDriver:
@@ -29,6 +30,7 @@ class WebDriver:
     def __init__(self):
         driver_args, driver_kwargs = self.get_driver_args()
         self.driver = DEFAULT_WEBDRIVER_CLASS(*driver_args, **driver_kwargs)
+        self.driver.execute_cdp_cmd("Network.setCacheDisabled", {"cacheDisabled": True})
 
     def get_driver_args(self) -> tuple:
         """Return arguments for instantiating driver."""
@@ -50,7 +52,7 @@ class WebDriver:
             options.add_argument('--ignore-certificate-errors')
             options.add_argument('--allow-insecure-localhost')
             driver_kwargs["options"] = options
-            driver_kwargs["version_main"] = 122
+            driver_kwargs["version_main"] = 140
         elif self._WEBDRIVER_CLASS == webdriver.Firefox:
             profile = webdriver.FirefoxProfile()
             profile.set_preference("general.user_agent.override", user_agent)
@@ -63,7 +65,7 @@ class WebDriver:
         logger.debug("> find_element")
         try:
             return self.driver.find_element(by_type, key)
-        except NoSuchElementException as err:
+        except (NoSuchElementException, InvalidSelectorException) as err:
             pass
 
     def instant_select_element(self, key: str) -> t.Optional[WebElement]:

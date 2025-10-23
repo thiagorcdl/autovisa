@@ -18,19 +18,18 @@ class Appointment:
     element = None
 
     NO_DATE_REPR = "<No date>"
-    ADDRESS_RE_PATTERN = r"(\d+) ([a-zA-Z]+), (\d+), (\d\d:\d\d) ([a-zA-Z]+)"
-    INFO_RE_PATTERN = r"<td.*?>(.*?)</td>"
+    ADDRESS_RE_PATTERN = r"\s*(\d+)\s*([a-zA-Z]+)\s*,?\s*(\d+)\s*,?\s*(\d\d:\d\d)\s*([a-zA-Z]+).*"
+    INFO_RE_PATTERN = r"([a-zA-Z'\- ]+)\s+(\w{2}\d{6})"
 
     def __init__(
         self, day, month, year, time, city, applicant_name="",
-        passport="", ds_160="", link=None
+        passport="", link=None
     ):
         self.date = datetime.date(year, month, day)
         self.time = time
         self.city = city
         self.applicant_name = applicant_name
         self.passport = passport
-        self.ds_160 = ds_160
         self.link = link
 
     def __repr__(self):
@@ -48,7 +47,7 @@ class Appointment:
 
     @cached_property
     def applicant_info_list(self) -> list:
-        return filter_out_empty([self.applicant_name, self.passport, self.ds_160])
+        return filter_out_empty([self.applicant_name, self.passport])
 
     def match_applicant(self, applicant_info: str) -> bool:
         """Return whether applicant matches any info in this appointment."""
@@ -74,31 +73,28 @@ class Appointment:
 
     @classmethod
     def get_applicant_from_element(cls, base_element) -> tuple:
-        """Parse address from element in the following format:
+        """Parse applicant information from table element in the following format:
 
             <tr>
                 <td>Jerry Gerônimo</td>
                 <td>XY123456</td>
-                <td class="show-for-medium">AA00BB12CC</td>
             </tr>
        """
         row_element = base_element.find_element(By.CSS_SELECTOR, "table > tbody > tr")
-        return tuple(
-            result.strip() for result in re.findall(
-                cls.INFO_RE_PATTERN,
-                row_element.text
-            )[:3]
-        )
+        return re.findall(
+            cls.INFO_RE_PATTERN,
+            row_element.text
+        )[0]
 
     @classmethod
     def create_from_element(cls, base_element):
         """Create an Appointment instance from HTML element."""
         day, month, year, time, city = cls.get_address_from_element(base_element)
-        name, passport, ds_160 = cls.get_applicant_from_element(base_element)
+        name, passport = cls.get_applicant_from_element(base_element)
         link = base_element.find_element(
             By.CSS_SELECTOR, "a.button.primary.small"
         ).get_attribute("href")
         return cls(
-            int(day), month, int(year), time, city, name, passport, ds_160,
+            int(day), month, int(year), time, city, name.upper(), passport.upper(),
             link
         )

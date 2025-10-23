@@ -7,15 +7,16 @@ import random
 import time
 from functools import lru_cache, wraps
 
+from fake_useragent import FakeUserAgent
 from seleniumwire.request import Request
 from seleniumwire.utils import decode
 
 from autovisa.src.constants import (
     DEFAULT_USERAGENT, FALSY_STRINGS, MAX_ACTION_SLEEP, MIN_ACTION_SLEEP,
-    TEST_LOGIN, TEST_PWD, TEST_USERAGENT
+    TEST_LOGIN, TEST_PWD, TEST_USERAGENT, LOGGER_NAME
 )
 
-logger = logging.getLogger()
+logger = logging.getLogger(LOGGER_NAME)
 
 
 def delayed(function):
@@ -87,7 +88,7 @@ def wait_request():
 
 
 def get_response_body(request: Request) -> bytes:
-    """Esctract response body from request."""
+    """Extract response body from request."""
     response = request.response
     return decode(
         response.body,
@@ -147,7 +148,8 @@ def get_credentials() -> tuple:
 
 def get_user_agent() -> str:
     """Retrieve user agent string to be used in the webdriver."""
-    return TEST_USERAGENT if is_testing() else DEFAULT_USERAGENT
+    user_agent = TEST_USERAGENT if is_testing() else FakeUserAgent().chrome
+    return user_agent or DEFAULT_USERAGENT
 
 
 def get_month_int(month_name: str) -> int:

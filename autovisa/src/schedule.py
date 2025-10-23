@@ -1,7 +1,6 @@
 """Provide class for scheduling visa."""
 import datetime
 import logging
-import re
 import typing as t
 
 from selenium.webdriver import Keys
@@ -12,15 +11,15 @@ from seleniumwire.request import Request
 from autovisa.src.appointment import Appointment
 from autovisa.src.constants import (
     ALLOWED_CITY_IDS, CITY_NAME_ID_MAP, EXCLUDE_DATE_END, EXCLUDE_DATE_START,
-    LOGIN_URL, MAX_REQUEST_SEARCHES
+    LOGIN_URL, MAX_REQUEST_SEARCHES, LOGGER_NAME
 )
 from autovisa.src.utils import (
-    get_credentials, get_month_int, get_dict_response,
+    get_credentials, get_dict_response,
     is_prod, long_sleep, quick_sleep, rand_sleep, wait_page_load, wait_request
 )
 from autovisa.src.webdriver import WebDriver
 
-logger = logging.getLogger()
+logger = logging.getLogger(LOGGER_NAME)
 
 
 class Scheduler(WebDriver):
@@ -52,7 +51,7 @@ class Scheduler(WebDriver):
         self.slow_select_element("commit")
         wait_page_load()
 
-    def get_current_appointment_list(self, applicant_info=None):
+    def gen_current_appointment_list(self, applicant_info=None):
         """Parse raw text in page and store new Appointment instances."""
         logger.debug("> get_current_appointment_list")
         rand_sleep(1, 2)
@@ -62,33 +61,32 @@ class Scheduler(WebDriver):
             By.CSS_SELECTOR, ".application.attend_appointment"
         )
 
+        current_appointment_list = []
         for base_element in appointment_cards:
             appointment = Appointment.create_from_element(base_element)
             if applicant_info and appointment.match_applicant(applicant_info):
-                self.current_appointment_list.append(appointment)
+                current_appointment_list.append(appointment)
                 logger.info("Current appointment: %s", appointment)
             else:
                 logger.info("Ignored appointment: %s", appointment)
+        return current_appointment_list
 
     def navigate_reschedule_page(self):
         """Expand appropriate section and click CTAs to open the rescheduling page."""
         logger.debug("> navigate_reschedule_page")
         # Click "continue" CTA
-        self.slow_select_element(f"a[href=\"{self.current_appointment.link}\"]")
+        self.slow_select_element("//a[contains(text(), 'Continue')]")
         wait_page_load()
 
         # Expand "reschedule" section
-        self.slow_select_element("li.accordion-item:nth-child(4) > a:nth-child(1)")
+        self.slow_select_element("//a[.//h5/span[contains(@class, 'fa-calendar-minus')]]")
         # Click "reschedule" CTA
-        self.slow_select_element(
-            "li.accordion-item:nth-child(4) > div:nth-child(2) > div:nth-child(1) "
-            "> div:nth-child(2) > p:nth-child(2) > a:nth-child(1)"
-        )
+        self.slow_select_element("//a[contains(text(), 'Reschedule Appointment')]")
         wait_page_load()
 
     def find_json_request(self, city) -> t.Optional[Request]:
         """Traverse requests list multiple times to find the JSON response,
-        which contains the avaialble dates.
+        which contains the available dates.
         """
         wait_request()
         request_wait_retries = 5
@@ -118,7 +116,7 @@ class Scheduler(WebDriver):
         return request
 
     def validate_candidate(
-        self, candidate, candidate_repr, city
+            self, candidate, candidate_repr, city
     ) -> bool:
         """Ensure candidate for new best date is sooner than the best ones so far."""
         logger.debug(f"> validate_candidate {candidate}")
@@ -142,6 +140,7 @@ class Scheduler(WebDriver):
         """Find the soonest available date among all cities."""
         logger.debug("> get_best_date")
         if "schedule" not in self.driver.current_url:
+            # return  # todo revert
             raise Exception("Session ended")
         self.new_appointment = None
 
@@ -178,7 +177,7 @@ class Scheduler(WebDriver):
             year, month, day = list(map(int, candidate_repr.split("-")))
             candidate = datetime.date(year, month, day)
             if not self.validate_candidate(
-                candidate, candidate_repr, option.text
+                    candidate, candidate_repr, option.text
             ):
                 continue
             self.new_appointment = Appointment(day, month, year, "", option.text)
@@ -207,6 +206,7 @@ class Scheduler(WebDriver):
         free_date_cell.click()
 
         # Pick latest time
+        logger.info("///// Picking latest time")
         time_select = Select(
             self.slow_select_element("appointments_consulate_appointment_time")
         )
@@ -216,6 +216,7 @@ class Scheduler(WebDriver):
         self.slow_select_element("appointments_consulate_appointment_submit")
         if is_prod():
             # Confirm modal
+            logger.info("///// Confirming")
             self.slow_select_element(
                 "body > div.reveal-overlay > div > div > a.button.alert"
             )
@@ -234,20 +235,20 @@ class Scheduler(WebDriver):
                 logger.info("... Checking cities again.")
                 self.get_best_date()
 
-        # self.execute_reschedule()
+        self.execute_reschedule()
         self.current_appointment = None
         self.new_appointment = None
 
     def run_reschedule_suite(self, applicant_info=None):
-        """Run all the actions necessary to login and reschedule the appointment
+        """Run all the actions necessary to log in and reschedule the appointment
         to a date that is sooner than the currently scheduled appointment.
         """
         logger.debug("> run_reschedule_suite")
         self.navigate_login_page()
         self.execute_login()
-        self.get_current_appointment_list(applicant_info)
+        self.current_appointment_list = self.gen_current_appointment_list(applicant_info)
 
-        if not self.current_appointment:
+        if not self.current_appointment_list:
             logger.error("No upcoming appointments found!")
             return
 
