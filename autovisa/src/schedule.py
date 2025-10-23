@@ -69,9 +69,9 @@ class Scheduler(WebDriver):
             appointment = Appointment.create_from_element(base_element)
             if applicant_info and appointment.match_applicant(applicant_info):
                 current_appointment_list.append(appointment)
-                logger.info("Current appointment: %s", appointment)
+                logger.info("... Current appointment: %s", appointment)
             else:
-                logger.info("Ignored appointment: %s", appointment)
+                logger.info("... Ignored appointment: %s", appointment)
         return current_appointment_list
 
     def navigate_reschedule_page(self):
@@ -135,7 +135,7 @@ class Scheduler(WebDriver):
             "appointments_consulate_appointment_date")
         if not date_select:
             # No dates for selected city
-            logger.info("No dates for %s", option_text)
+            logger.info("... No dates for %s", option_text)
             return
 
         request = self.find_json_request(option_text)
@@ -154,7 +154,10 @@ class Scheduler(WebDriver):
             return
         self.new_appointment = Appointment(day, month, year, "", option_text)
 
-        logger.info("//// New best date found: %s", self.new_appointment)
+        logger.info(
+            "//////////////\n\n//// New best date found: %s\n\n//////////////",
+            self.new_appointment
+        )
         return self.new_appointment
 
     def get_best_date(self) -> Appointment:
@@ -219,6 +222,10 @@ class Scheduler(WebDriver):
             self.slow_select_element("appointments_consulate_appointment_time")
         )
         option = time_select.options[-1]
+        if not option.get_attribute("value"):
+            logger.info("... Date has no time slots.")
+            return False
+
         time_select.select_by_value(option.get_attribute("value"))
 
         self.slow_select_element("appointments_consulate_appointment_submit")
@@ -228,6 +235,7 @@ class Scheduler(WebDriver):
             self.slow_select_element(
                 "body > div.reveal-overlay > div > div > a.button.alert"
             )
+        return True
 
     def reschedule_current_appointment(self):
         logger.debug(f"> reschedule_current_appointment {self.current_appointment}")
@@ -243,7 +251,16 @@ class Scheduler(WebDriver):
                 logger.info("... Checking cities again.")
                 self.get_best_date()
 
-        self.execute_reschedule()
+        if not self.execute_reschedule():
+            self.new_appointment = None
+            while not self.new_appointment:
+                logger.info("... No good appointments found.")
+                long_sleep()
+                self.driver.refresh()
+                logger.info("... Checking cities again.")
+                self.get_best_date()
+            self.execute_reschedule()
+
         self.current_appointment = None
         self.new_appointment = None
 

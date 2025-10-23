@@ -32,5 +32,10 @@ if __name__ == "__main__":
             scheduler.run_reschedule_suite(applicant_info=applicant_info)
         except Exception as err:
             logger.error(str(err), exc_info=err)
+            try:
+                logger.info("... Closing browser.")
+                scheduler.driver.close()
+            except Exception as close_err:
+                logger.warning("! Failed to close browser: %s", str(close_err))
         logger.info("... Hibernating at %s", datetime.datetime.now())
         hibernate()
