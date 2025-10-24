@@ -16,6 +16,7 @@ from autovisa.src.constants import (
     ALLOWED_CITY_IDS, CITY_NAME_ID_MAP, EXCLUDE_DATE_END, EXCLUDE_DATE_START,
     LOGIN_URL, LOGGER_NAME
 )
+from autovisa.src.exceptions import MissingDatesException
 from autovisa.src.utils import (
     get_credentials, get_dict_response,
     is_prod, long_sleep, quick_sleep, rand_sleep, wait_page_load, wait_request
@@ -136,11 +137,14 @@ class Scheduler(WebDriver):
         if not date_select:
             # No dates for selected city
             logger.info("... No dates for %s", option_text)
-            return
+            error_txt = self.instant_select_element("consulate_date_time_not_available")
+            if error_txt:
+                raise MissingDatesException(error_txt.text)
+            raise MissingDatesException("No field for selecting dates found in the form.")
 
         request = self.find_json_request(option_text)
         if not request:
-            return
+            MissingDatesException("Could not find JSON request with available dates.")
 
         # Get first date
         response = get_dict_response(request)
@@ -160,7 +164,7 @@ class Scheduler(WebDriver):
         )
         return self.new_appointment
 
-    def get_best_date(self) -> Appointment:
+    def get_best_date(self) -> Appointment | None:
         """Find the soonest available date among all cities."""
         logger.debug("> get_best_date")
         if "schedule" not in self.driver.current_url:
@@ -173,6 +177,7 @@ class Scheduler(WebDriver):
             "appointments_consulate_appointment_facility_id")
         city_select = Select(city_select_element)
         n_allowed_cities = len(ALLOWED_CITY_IDS)
+        n_errors = 0
         if n_allowed_cities > 1:
             for option in city_select.options:
                 city_id = option.get_attribute("value")
@@ -188,7 +193,16 @@ class Scheduler(WebDriver):
                 del self.driver.requests
 
                 city_select.select_by_value(city_id)
-                new_appointment = self.choose_best_date_for_city(option.text)
+                try:
+                    new_appointment = self.choose_best_date_for_city(option.text)
+                except MissingDatesException as err:
+                    logger.warning("Couldn't get dates for city %s: %s", option.text, str(err))
+                    n_errors += 1
+                    new_appointment = None
+                    if n_errors >= n_allowed_cities:
+                        # All cities failed
+                        raise err
+
                 if new_appointment:
                     return new_appointment
         elif n_allowed_cities == 1:
