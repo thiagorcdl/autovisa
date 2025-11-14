@@ -242,13 +242,14 @@ class Scheduler(WebDriver):
 
         time_select.select_by_value(option.get_attribute("value"))
 
-        self.slow_select_element("appointments_consulate_appointment_submit")
+        self.slow_select_element("#appointments_submit")
         if is_prod():
             # Confirm modal
             logger.info("///// Confirming")
-            self.slow_select_element(
+            button = self.slow_select_element(
                 "body > div.reveal-overlay > div > div > a.button.alert"
             )
+            button.click()
         return True
 
     def reschedule_current_appointment(self):

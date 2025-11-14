@@ -43,7 +43,9 @@ MAX_REQUEST_SEARCHES = 2
 EXCLUDE_DATE_START = datetime.date(2023, 5, 15)
 EXCLUDE_DATE_END = datetime.date(2023, 7, 15)
 
-ALLOWED_CITY_IDS = ["94"]
+ALLOWED_CITY_IDS = (
+    "94",
+)
 
 # --- Constants for testing --- #
 
