@@ -1,0 +1,22 @@
+#
+# Testing requirements for autovisa project
+#
+
+# Testing framework
+pytest>=7.0.0
+pytest-cov>=4.0.0
+pytest-mock>=3.10.0
+
+# Coverage reporting
+coverage>=7.0.0
+
+# Linting and formatting
+flake8>=6.0.0
+black>=23.0.0
+isort>=5.12.0
+
+# Type checking
+mypy>=1.0.0
+
+# Mocking
+responses>=0.23.0
