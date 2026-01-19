@@ -13,7 +13,7 @@ FALSY_STRINGS = ["", "0", "false", "no"]
 MIN_ACTION_SLEEP = 1
 MAX_ACTION_SLEEP = 2
 
-LOGIN_URL = "https://ais.usvisa-info.com/en-ca/niv/users/sign_in"
+LOGIN_PATH = "/en-ca/niv/users/sign_in"
 
 DEFAULT_WEBDRIVER_CLASS = undetected_chromedriver.Chrome
 

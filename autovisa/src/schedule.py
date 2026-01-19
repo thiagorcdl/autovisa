@@ -1,6 +1,7 @@
 """Provide class for scheduling visa."""
 import datetime
 import logging
+import os
 import typing as t
 from urllib.parse import urlparse
 
@@ -14,7 +15,7 @@ from seleniumwire.request import Request
 from autovisa.src.appointment import Appointment
 from autovisa.src.constants import (
     ALLOWED_CITY_IDS, CITY_NAME_ID_MAP, EXCLUDE_DATE_END, EXCLUDE_DATE_START,
-    LOGIN_URL, LOGGER_NAME
+    LOGIN_PATH, LOGGER_NAME
 )
 from autovisa.src.exceptions import MissingDatesException
 from autovisa.src.utils import (
@@ -34,12 +35,13 @@ class Scheduler(WebDriver):
 
     def navigate_login_page(self):
         logger.debug("> navigate_login_page")
-        self.driver.get(LOGIN_URL)
+        login_url = os.getenv("BASE_URL", "").rstrip("/") + LOGIN_PATH
+        self.driver.get(login_url)
         wait_page_load()
 
     def execute_login(self):
         logger.debug("> execute_login")
-        """Fill in credentials, consent to privacy policity and try logging in."""
+        """Fill in credentials, consent to privacy policy and try logging in."""
         email, password = get_credentials()
 
         email_input = self.quick_select_element("user_email")
