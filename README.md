@@ -8,12 +8,24 @@ reschedule their appointment to some sooner date.
 
 Currently, the only cities listed are the ones in Canada.
 
+> DISCLAIMER: This project is intended for educational purposes. 
+> Make sure you read the Terms o Service for any website before using this tool.
+> The author does not endorse or encourage any unethical activity and is not responsible for
+> the usage of this script by third party actors.
 
 # Usage
 
 1. Clone repository
-2. Export credentials in env variables `VISA_EMAIL` and `VISA_PASSWORD`
-1. Run `python -m autovisa`
+2. Install packages `pip install -r requirements.txt`
+3. Export env variables:
+   ```
+   VISA_EMAIL="your@email.com"
+   VISA_PASSWORD="your_password"
+   APPLICANT_ID="YOURAPPID"
+   BASE_URL="https://consulate.base.url"
+   PRODUCTION=1
+   ```
+4. Run `python -m autovisa`
 
 # TODO
 - [ ] Add unit tests
