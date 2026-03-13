@@ -28,8 +28,7 @@ Currently, the only cities listed are the ones in Canada.
 4. Run `python -m autovisa`
 
 # TODO
-- [ ] Add unit tests
-- [x] Add better support for multiple appointments
+- [x] Add unit tests
 - [ ] Add better support for appointments with multiple applicants
 - [ ] Optionallly pass credentials via arguments / input password via CLI
 - [ ] Pass list of allowed cities via arguments
