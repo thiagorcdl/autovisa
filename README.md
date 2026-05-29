@@ -43,4 +43,4 @@ Currently, the only cities listed are the ones in Canada.
 - [ ] Pass acceptable date range via arguments
 - [ ] Add support for other countries
   - [ ] Replace locale in `LOGIN_URL`
-  - [ ] Add country's cities to `CITY_NAME_ID_MAP`
+  - [ ] Add country's cities to `CITY_SLUG_ID_MAP`

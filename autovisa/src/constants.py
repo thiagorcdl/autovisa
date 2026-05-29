@@ -25,20 +25,7 @@ BY_TYPE_ORDER = (
     By.ID, By.CSS_SELECTOR, By.XPATH, By.NAME, By.CLASS_NAME, By.LINK_TEXT, By.TAG_NAME
 )
 
-# Maps the consulate's display name (as shown on the page) to its facility ID.
-CITY_NAME_ID_MAP = {
-    "Calgary": "89",
-    "Halifax": "90",
-    "Montreal": "91",
-    "Ottawa": "92",
-    "Quebec City": "93",
-    "Toronto": "94",
-    "Vancouver": "95",
-}
-
-# Maps the user-facing slug (used in the ALLOWED_CITIES env var) to its
-# facility ID. Slugs are pre-computed so resolving the env var is a plain dict
-# lookup rather than slugifying every known city on each call.
+# Maps the user-facing slug to its facility ID.
 CITY_SLUG_ID_MAP = {
     "calgary": "89",
     "halifax": "90",

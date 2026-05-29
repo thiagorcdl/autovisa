@@ -14,7 +14,7 @@ from seleniumwire.request import Request
 
 from autovisa.src.appointment import Appointment
 from autovisa.src.constants import (
-    CITY_NAME_ID_MAP, LOGIN_PATH, LOGGER_NAME
+    LOGIN_PATH, LOGGER_NAME
 )
 from autovisa.src.exceptions import MissingDatesException
 from autovisa.src.utils import (
@@ -212,9 +212,9 @@ class Scheduler(WebDriver):
                 if new_appointment:
                     return new_appointment
         elif n_allowed_cities == 1:
-            for city, city_id in CITY_NAME_ID_MAP.items():
-                if city_id == allowed_city_ids[0]:
-                    return self.choose_best_date_for_city(city)
+            for option in city_select.options:
+                if option.get_attribute("value") == allowed_city_ids[0]:
+                    return self.choose_best_date_for_city(option.text)
 
     def execute_reschedule(self):
         """Select the info for the best appointment found."""
@@ -222,7 +222,7 @@ class Scheduler(WebDriver):
         city_select = Select(
             self.slow_select_element("appointments_consulate_appointment_facility_id")
         )
-        city_select.select_by_value(CITY_NAME_ID_MAP[self.new_appointment.city])
+        city_select.select_by_visible_text(self.new_appointment.city)
 
         # Select soonest date in calendar
         self.slow_select_element("appointments_consulate_appointment_date")
