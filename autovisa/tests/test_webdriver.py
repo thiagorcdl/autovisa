@@ -8,11 +8,14 @@ from autovisa.src.webdriver import WebDriver
 class TestWebDriver(unittest.TestCase):
     """Test cases for WebDriver class."""
 
+    @patch('autovisa.src.webdriver.get_local_chrome')
     @patch('autovisa.src.webdriver.get_user_agent')
-    @patch('autovisa.src.webdriver.undetected_chromedriver.Chrome')
-    def test_webdriver_initialization(self, mock_chrome, mock_get_user_agent):
+    @patch('autovisa.src.webdriver.DEFAULT_WEBDRIVER_CLASS')
+    def test_webdriver_initialization(self, mock_chrome, mock_get_user_agent,
+                                      mock_get_local_chrome):
         """Test WebDriver initialization."""
         mock_get_user_agent.return_value = "Test User Agent"
+        mock_get_local_chrome.return_value = ("/fake/chrome", "/fake/chromedriver", 140)
         mock_driver_instance = MagicMock()
         mock_chrome.return_value = mock_driver_instance
 
