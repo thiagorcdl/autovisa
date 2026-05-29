@@ -6,7 +6,7 @@ from pathlib import Path
 import seleniumwire
 from selenium import webdriver
 from selenium.common import ElementNotInteractableException, NoSuchElementException, \
-    InvalidSelectorException
+    InvalidSelectorException, StaleElementReferenceException
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.remote.webelement import WebElement
 from seleniumwire import undetected_chromedriver
@@ -14,7 +14,7 @@ from seleniumwire.undetected_chromedriver import ChromeOptions
 
 from autovisa.src.constants import (
     BY_TYPE_ORDER,
-    DEFAULT_WEBDRIVER_CLASS, LOGGER_NAME
+    DEFAULT_WEBDRIVER_CLASS, LOGGER_NAME, MAX_CLICK_ATTEMPTS
 )
 from autovisa.src.utils import (
     delayed, get_user_agent,
@@ -113,9 +113,12 @@ class WebDriver:
         except (NoSuchElementException, InvalidSelectorException) as err:
             pass
 
-    def instant_select_element(self, key: str) -> t.Optional[WebElement]:
+    def instant_select_element(self, key: str, attempt: int = 1) -> t.Optional[WebElement]:
         """Find and click element."""
-        logger.debug("> select_element")
+        if attempt > MAX_CLICK_ATTEMPTS:
+            return None
+
+        logger.debug("> select_element" + f"(attempt #{attempt})" if attempt > 1 else "")
         for by_type in BY_TYPE_ORDER:
             element = self.find_element(by_type, key)
 
@@ -124,6 +127,8 @@ class WebDriver:
 
             try:
                 element.click()
+            except StaleElementReferenceException:
+                return self.instant_select_element(key, attempt + 1)
             except ElementNotInteractableException:
                 return None
             return element

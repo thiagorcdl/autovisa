@@ -90,6 +90,11 @@ class Scheduler(WebDriver):
         self.slow_select_element("//a[contains(text(), 'Reschedule Appointment')]")
         wait_page_load()
 
+        # If notification of max reschedules show up, accept
+        checkbox = self.slow_select_element(".icheckbox")
+        if checkbox:
+            self.slow_select_element("input[value='Continue']")
+
     def find_json_request(self, city) -> t.Optional[Request]:
         """Traverse requests list multiple times to find the JSON response,
         which contains the available dates.
