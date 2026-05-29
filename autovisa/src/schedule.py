@@ -112,9 +112,7 @@ class Scheduler(WebDriver):
                 return request
         return None
 
-    def validate_candidate(
-            self, candidate, candidate_repr, city
-    ) -> bool:
+    def validate_candidate(self, candidate, candidate_repr, city) -> bool:
         """Ensure candidate for new best date is sooner than the best ones so far."""
         logger.debug(f"> validate_candidate {candidate}")
         if candidate >= self.current_appointment.date:
@@ -170,7 +168,6 @@ class Scheduler(WebDriver):
         """Find the soonest available date among all cities."""
         logger.debug("> get_best_date")
         if "schedule" not in self.driver.current_url:
-            # return  # todo revert
             raise Exception("Session ended")
         self.new_appointment = None
 
