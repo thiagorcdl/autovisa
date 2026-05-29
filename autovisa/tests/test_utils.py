@@ -8,7 +8,7 @@ from autovisa.src.constants import (
 )
 from autovisa.src.utils import (
     is_truthy, is_env, is_prod, is_testing, get_credentials,
-    get_allowed_city_ids, get_exclude_date_range,
+    get_allowed_city_ids, get_exclude_date_range, slugify,
     get_user_agent, get_month_int, filter_out_empty, get_response_body,
     get_dict_response
 )
@@ -151,13 +151,44 @@ class TestGetExcludeDateRange(unittest.TestCase):
         self.assertEqual(get_exclude_date_range(), (None, None))
 
 
+class TestSlugify(unittest.TestCase):
+    """Test cases for the slugify helper."""
+
+    def test_lowercases_and_hyphenates(self):
+        self.assertEqual(slugify("Quebec City"), "quebec-city")
+
+    def test_strips_accents(self):
+        self.assertEqual(slugify("Montréal"), "montreal")
+
+    def test_collapses_punctuation_and_trims(self):
+        self.assertEqual(slugify("  Québec_City!! "), "quebec-city")
+
+    def test_already_a_slug_is_unchanged(self):
+        self.assertEqual(slugify("quebec-city"), "quebec-city")
+
+
 class TestGetAllowedCityIds(unittest.TestCase):
     """Test cases for get_allowed_city_ids function."""
 
-    @patch.dict('os.environ', {'ALLOWED_CITY_IDS': '94, 91 ,93'})
-    def test_ids_from_env(self):
-        """Test parsing a comma-separated list, trimming whitespace."""
+    @patch.dict('os.environ', {'ALLOWED_CITY_IDS': 'Toronto, montreal ,quebec-city'})
+    def test_slugs_from_env(self):
+        """City names in any casing/spacing resolve to their IDs."""
         self.assertEqual(get_allowed_city_ids(), ('94', '91', '93'))
+
+    @patch.dict('os.environ', {'ALLOWED_CITY_IDS': 'Montréal,QUÉBEC CITY'})
+    def test_accented_names_resolve(self):
+        """Accented and upper-cased names still resolve."""
+        self.assertEqual(get_allowed_city_ids(), ('91', '93'))
+
+    @patch.dict('os.environ', {'ALLOWED_CITY_IDS': '94, 91 ,93'})
+    def test_numeric_ids_backward_compatible(self):
+        """Raw numeric IDs are still accepted."""
+        self.assertEqual(get_allowed_city_ids(), ('94', '91', '93'))
+
+    @patch.dict('os.environ', {'ALLOWED_CITY_IDS': 'toronto, Toronto, unknown-city'})
+    def test_unknown_and_duplicates_dropped(self):
+        """Unknown entries are ignored and duplicates collapsed in order."""
+        self.assertEqual(get_allowed_city_ids(), ('94',))
 
     @patch.dict('os.environ', {}, clear=True)
     def test_ids_unset(self):

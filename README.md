@@ -26,7 +26,7 @@ Currently, the only cities listed are the ones in Canada.
    BASE_URL="https://your-consulate.base.url"
    PRODUCTION=1
    # Optional filters:
-   ALLOWED_CITY_IDS="94,93" # (see CITY_NAME_ID_MAP in constants.py)
+   ALLOWED_CITY_IDS="toronto,quebec-city" # city names, any casing/spacing (see CITY_NAME_ID_MAP in constants.py); numeric IDs still accepted
    # EXCLUDE_DATE_START / EXCLUDE_DATE_END define an appointment window to skip.
    # Either may be omitted: with only START, every date from START on is skipped;
    # with only END, every date up to END is skipped. Omit both to exclude nothing.

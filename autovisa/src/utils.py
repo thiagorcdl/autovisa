@@ -5,7 +5,9 @@ import json
 import logging
 import os
 import random
+import re
 import time
+import unicodedata
 from functools import lru_cache, wraps
 from typing import Optional
 
@@ -14,9 +16,9 @@ from seleniumwire.request import Request
 from seleniumwire.utils import decode
 
 from autovisa.src.constants import (
-    DEFAULT_USERAGENT, FALSY_STRINGS, MAX_ACTION_SLEEP, MIN_ACTION_SLEEP,
-    TEST_LOGIN, TEST_PWD, TEST_USERAGENT, LOGGER_NAME, DEFAULT_EXCLUDE_DATE_START,
-    DEFAULT_EXCLUDE_DATE_END
+    CITY_NAME_ID_MAP, DEFAULT_USERAGENT, FALSY_STRINGS, MAX_ACTION_SLEEP,
+    MIN_ACTION_SLEEP, TEST_LOGIN, TEST_PWD, TEST_USERAGENT, LOGGER_NAME,
+    DEFAULT_EXCLUDE_DATE_START, DEFAULT_EXCLUDE_DATE_END
 )
 
 logger = logging.getLogger(LOGGER_NAME)
@@ -165,14 +167,40 @@ def get_exclude_date_range() -> tuple[Optional[datetime.date], Optional[datetime
     )
 
 
-def get_allowed_city_ids() -> tuple:
-    """Read the allowed city IDs from the environment.
+def slugify(value: str) -> str:
+    """Normalize an arbitrary string into a lowercase, hyphen-separated slug.
 
-    `ALLOWED_CITY_IDS` is expected as a comma-separated list of IDs
-    e.g. "94,91".
+    Strips accents/diacritics and collapses any run of non-alphanumeric
+    characters into a single hyphen, e.g. "Québec City!" -> "quebec-city".
     """
+    decomposed = unicodedata.normalize("NFKD", value)
+    ascii_str = decomposed.encode("ascii", "ignore").decode("ascii").lower()
+    return re.sub(r"[^a-z0-9]+", "-", ascii_str).strip("-")
+
+
+def get_allowed_city_ids() -> tuple:
+    """Read the allowed cities from the environment and resolve them to IDs.
+
+    `ALLOWED_CITY_IDS` is expected as a comma-separated list of city names
+    in any casing/spacing/accentuation, e.g. "Quebec City, toronto" or
+    "quebec-city,toronto". Each entry is slugified and matched against the
+    known cities. Raw numeric IDs (e.g. "93,94") are still accepted for
+    backward compatibility. Unknown entries are ignored, and duplicates are
+    collapsed while preserving order.
+    """
+    slug_to_id = {slugify(name): city_id for name, city_id in CITY_NAME_ID_MAP.items()}
+    known_ids = set(CITY_NAME_ID_MAP.values())
+
     raw = os.environ.get("ALLOWED_CITY_IDS", "")
-    return tuple(city_id.strip() for city_id in raw.split(",") if city_id.strip())
+    allowed: list = []
+    for entry in raw.split(","):
+        entry = entry.strip()
+        if not entry:
+            continue
+        city_id = entry if entry in known_ids else slug_to_id.get(slugify(entry))
+        if city_id and city_id not in allowed:
+            allowed.append(city_id)
+    return tuple(allowed)
 
 
 def get_user_agent() -> str:
