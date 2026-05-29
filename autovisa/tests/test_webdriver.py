@@ -3,30 +3,11 @@ import unittest
 from unittest.mock import MagicMock, patch, PropertyMock
 
 from autovisa.src.webdriver import WebDriver
+from autovisa.tests.base import OfflineBrowserTestCase
 
 
-class TestWebDriver(unittest.TestCase):
+class TestWebDriver(OfflineBrowserTestCase):
     """Test cases for WebDriver class."""
-
-    def setUp(self):
-        """Stub out the real browser launch so these unit tests run offline.
-
-        ``WebDriver.__init__`` instantiates ``DEFAULT_WEBDRIVER_CLASS`` and
-        resolves a local Chrome install; patching both keeps construction from
-        spawning an actual Chrome process (and hitting the network) per test.
-        """
-        patchers = [
-            patch('autovisa.src.webdriver.DEFAULT_WEBDRIVER_CLASS'),
-            patch('autovisa.src.webdriver.get_user_agent',
-                  return_value="Test User Agent"),
-            patch('autovisa.src.webdriver.get_local_chrome',
-                  return_value=("/fake/chrome", "/fake/chromedriver", 140)),
-        ]
-        self.mock_webdriver_class = patchers[0].start()
-        for patcher in patchers[1:]:
-            patcher.start()
-        for patcher in patchers:
-            self.addCleanup(patcher.stop)
 
     def test_webdriver_initialization(self):
         """Test WebDriver initialization."""

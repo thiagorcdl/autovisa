@@ -5,29 +5,11 @@ from unittest.mock import MagicMock, patch, PropertyMock
 
 from autovisa.src.schedule import Scheduler
 from autovisa.src.appointment import Appointment
+from autovisa.tests.base import OfflineBrowserTestCase
 
 
-class TestScheduler(unittest.TestCase):
+class TestScheduler(OfflineBrowserTestCase):
     """Test cases for Scheduler class."""
-
-    def setUp(self):
-        """Stub out the real browser launch so these unit tests run offline.
-
-        ``Scheduler`` inherits ``WebDriver.__init__``, which instantiates
-        ``DEFAULT_WEBDRIVER_CLASS`` and resolves a local Chrome install;
-        patching both keeps construction from spawning an actual Chrome
-        process (and hitting the network) per test.
-        """
-        patchers = [
-            patch('autovisa.src.webdriver.DEFAULT_WEBDRIVER_CLASS'),
-            patch('autovisa.src.webdriver.get_user_agent',
-                  return_value="Test User Agent"),
-            patch('autovisa.src.webdriver.get_local_chrome',
-                  return_value=("/fake/chrome", "/fake/chromedriver", 140)),
-        ]
-        for patcher in patchers:
-            patcher.start()
-            self.addCleanup(patcher.stop)
 
     def test_scheduler_initialization(self):
         """Test Scheduler initialization."""
