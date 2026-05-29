@@ -8,16 +8,30 @@ from autovisa.src.webdriver import WebDriver
 class TestWebDriver(unittest.TestCase):
     """Test cases for WebDriver class."""
 
-    @patch('autovisa.src.webdriver.get_local_chrome')
-    @patch('autovisa.src.webdriver.get_user_agent')
-    @patch('autovisa.src.webdriver.DEFAULT_WEBDRIVER_CLASS')
-    def test_webdriver_initialization(self, mock_chrome, mock_get_user_agent,
-                                      mock_get_local_chrome):
+    def setUp(self):
+        """Stub out the real browser launch so these unit tests run offline.
+
+        ``WebDriver.__init__`` instantiates ``DEFAULT_WEBDRIVER_CLASS`` and
+        resolves a local Chrome install; patching both keeps construction from
+        spawning an actual Chrome process (and hitting the network) per test.
+        """
+        patchers = [
+            patch('autovisa.src.webdriver.DEFAULT_WEBDRIVER_CLASS'),
+            patch('autovisa.src.webdriver.get_user_agent',
+                  return_value="Test User Agent"),
+            patch('autovisa.src.webdriver.get_local_chrome',
+                  return_value=("/fake/chrome", "/fake/chromedriver", 140)),
+        ]
+        self.mock_webdriver_class = patchers[0].start()
+        for patcher in patchers[1:]:
+            patcher.start()
+        for patcher in patchers:
+            self.addCleanup(patcher.stop)
+
+    def test_webdriver_initialization(self):
         """Test WebDriver initialization."""
-        mock_get_user_agent.return_value = "Test User Agent"
-        mock_get_local_chrome.return_value = ("/fake/chrome", "/fake/chromedriver", 140)
         mock_driver_instance = MagicMock()
-        mock_chrome.return_value = mock_driver_instance
+        self.mock_webdriver_class.return_value = mock_driver_instance
 
         web_driver = WebDriver()
 
