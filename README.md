@@ -9,7 +9,7 @@ reschedule their appointment to some sooner date.
 Currently, the only cities listed are the ones in Canada.
 
 > DISCLAIMER: This project is intended for educational purposes. 
-> Make sure you read the Terms o Service for any website before using this tool.
+> Make sure you read the Terms of Service for any website before using this tool.
 > The author does not endorse or encourage any unethical activity and is not responsible for
 > the usage of this script by third party actors.
 
@@ -25,6 +25,13 @@ Currently, the only cities listed are the ones in Canada.
    APPLICANT_ID="YOURAPPID"
    BASE_URL="https://your-consulate.base.url"
    PRODUCTION=1
+   # Optional filters:
+   ALLOWED_CITY_IDS="94,93" # (see CITY_NAME_ID_MAP in constants.py)
+   # EXCLUDE_DATE_START / EXCLUDE_DATE_END define an appointment window to skip.
+   # Either may be omitted: with only START, every date from START on is skipped;
+   # with only END, every date up to END is skipped. Omit both to exclude nothing.
+   EXCLUDE_DATE_START="2023-12-31"
+   EXCLUDE_DATE_END="2025-12-31"
    ```
 5. Run `python -m autovisa`
 

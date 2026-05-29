@@ -1,9 +1,14 @@
 """Unit tests for utils module."""
 import unittest
+from datetime import date
 from unittest.mock import MagicMock, patch
 
+from autovisa.src.constants import (
+    DEFAULT_EXCLUDE_DATE_START, DEFAULT_EXCLUDE_DATE_END
+)
 from autovisa.src.utils import (
     is_truthy, is_env, is_prod, is_testing, get_credentials,
+    get_allowed_city_ids, get_exclude_date_range,
     get_user_agent, get_month_int, filter_out_empty, get_response_body,
     get_dict_response
 )
@@ -111,6 +116,53 @@ class TestGetCredentials(ClearEnvCacheMixin, unittest.TestCase):
         """Test missing credentials raises ValueError."""
         with self.assertRaises(ValueError):
             get_credentials()
+
+
+class TestGetExcludeDateRange(unittest.TestCase):
+    """Test cases for get_exclude_date_range function."""
+
+    @patch.dict('os.environ',
+                {'EXCLUDE_DATE_START': '2023-05-15', 'EXCLUDE_DATE_END': '2023-07-15'})
+    def test_range_from_env(self):
+        """Test parsing both bounds from environment variables."""
+        start, end = get_exclude_date_range()
+        self.assertEqual(start, date(2023, 5, 15))
+        self.assertEqual(end, date(2023, 7, 15))
+
+    @patch.dict('os.environ',
+                {'EXCLUDE_DATE_START': '2023-05-15'}, clear=True)
+    def test_range_start_only(self):
+        """Test that passing only START yields an open-ended upper bound."""
+        start, end = get_exclude_date_range()
+        self.assertEqual(start, date(2023, 5, 15))
+        self.assertEqual(end, date.fromisoformat(DEFAULT_EXCLUDE_DATE_END))
+
+    @patch.dict('os.environ',
+                {'EXCLUDE_DATE_END': '2023-07-15'}, clear=True)
+    def test_range_end_only(self):
+        """Test that passing only END yields an open-ended lower bound."""
+        start, end = get_exclude_date_range()
+        self.assertEqual(start, date.fromisoformat(DEFAULT_EXCLUDE_DATE_START))
+        self.assertEqual(end, date(2023, 7, 15))
+
+    @patch.dict('os.environ', {}, clear=True)
+    def test_range_unset(self):
+        """Test that missing variables yield a (None, None) range."""
+        self.assertEqual(get_exclude_date_range(), (None, None))
+
+
+class TestGetAllowedCityIds(unittest.TestCase):
+    """Test cases for get_allowed_city_ids function."""
+
+    @patch.dict('os.environ', {'ALLOWED_CITY_IDS': '94, 91 ,93'})
+    def test_ids_from_env(self):
+        """Test parsing a comma-separated list, trimming whitespace."""
+        self.assertEqual(get_allowed_city_ids(), ('94', '91', '93'))
+
+    @patch.dict('os.environ', {}, clear=True)
+    def test_ids_unset(self):
+        """Test that a missing variable yields an empty tuple."""
+        self.assertEqual(get_allowed_city_ids(), ())
 
 
 class TestGetUserAgent(unittest.TestCase):

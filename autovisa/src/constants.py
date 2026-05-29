@@ -1,5 +1,4 @@
 """Store default values."""
-import datetime
 import logging
 
 from selenium.webdriver.common.by import By
@@ -36,17 +35,13 @@ CITY_NAME_ID_MAP = {
     "Vancouver": "95",
 }
 
+# Open extremes used to fill in whichever bound the user omits, so a single
+# bound yields an open-ended exclusion window.
+DEFAULT_EXCLUDE_DATE_START = "1970-01-01"
+DEFAULT_EXCLUDE_DATE_END = "2999-12-31"  # TODO fix this before year 3000
+
 MAX_REQUEST_SEARCHES = 2
 MAX_CLICK_ATTEMPTS = 3
-
-# --- Constants that act as parameters --- #
-
-EXCLUDE_DATE_START = datetime.date(2023, 5, 15)
-EXCLUDE_DATE_END = datetime.date(2023, 7, 15)
-
-ALLOWED_CITY_IDS = (
-    "94",
-)
 
 # --- Constants for testing --- #
 

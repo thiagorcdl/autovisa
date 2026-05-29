@@ -14,13 +14,13 @@ from seleniumwire.request import Request
 
 from autovisa.src.appointment import Appointment
 from autovisa.src.constants import (
-    ALLOWED_CITY_IDS, CITY_NAME_ID_MAP, EXCLUDE_DATE_END, EXCLUDE_DATE_START,
-    LOGIN_PATH, LOGGER_NAME
+    CITY_NAME_ID_MAP, LOGIN_PATH, LOGGER_NAME
 )
 from autovisa.src.exceptions import MissingDatesException
 from autovisa.src.utils import (
-    get_credentials, get_dict_response,
-    is_prod, long_sleep, quick_sleep, rand_sleep, wait_page_load, wait_request
+    get_allowed_city_ids, get_credentials, get_dict_response,
+    get_exclude_date_range, is_prod, long_sleep, quick_sleep, rand_sleep,
+    wait_page_load, wait_request
 )
 from autovisa.src.webdriver import WebDriver
 
@@ -128,7 +128,8 @@ class Scheduler(WebDriver):
             )
             return False
 
-        if EXCLUDE_DATE_START <= candidate <= EXCLUDE_DATE_END:
+        exclude_start, exclude_end = get_exclude_date_range()
+        if exclude_start and exclude_end and exclude_start <= candidate <= exclude_end:
             logger.info(
                 "Best date for %s ignored: %s (within exclude date range)",
                 city, candidate_repr
@@ -180,13 +181,14 @@ class Scheduler(WebDriver):
         city_select_element = self.slow_select_element(
             "appointments_consulate_appointment_facility_id")
         city_select = Select(city_select_element)
-        n_allowed_cities = len(ALLOWED_CITY_IDS)
+        allowed_city_ids = get_allowed_city_ids()
+        n_allowed_cities = len(allowed_city_ids)
         n_errors = 0
         if n_allowed_cities > 1:
             for option in city_select.options:
                 city_id = option.get_attribute("value")
 
-                if city_id not in ALLOWED_CITY_IDS:
+                if city_id not in allowed_city_ids:
                     continue
 
                 # Set clean slate / in case of "continue", close the calendar
@@ -211,7 +213,7 @@ class Scheduler(WebDriver):
                     return new_appointment
         elif n_allowed_cities == 1:
             for city, city_id in CITY_NAME_ID_MAP.items():
-                if city_id == ALLOWED_CITY_IDS[0]:
+                if city_id == allowed_city_ids[0]:
                     return self.choose_best_date_for_city(city)
 
     def execute_reschedule(self):

@@ -1,11 +1,13 @@
 """Utility functions."""
 import calendar
+import datetime
 import json
 import logging
 import os
 import random
 import time
 from functools import lru_cache, wraps
+from typing import Optional
 
 from fake_useragent import FakeUserAgent
 from seleniumwire.request import Request
@@ -13,7 +15,8 @@ from seleniumwire.utils import decode
 
 from autovisa.src.constants import (
     DEFAULT_USERAGENT, FALSY_STRINGS, MAX_ACTION_SLEEP, MIN_ACTION_SLEEP,
-    TEST_LOGIN, TEST_PWD, TEST_USERAGENT, LOGGER_NAME
+    TEST_LOGIN, TEST_PWD, TEST_USERAGENT, LOGGER_NAME, DEFAULT_EXCLUDE_DATE_START,
+    DEFAULT_EXCLUDE_DATE_END
 )
 
 logger = logging.getLogger(LOGGER_NAME)
@@ -144,6 +147,32 @@ def get_credentials() -> tuple:
             raise ValueError("Missing credentials")
 
     return login, password
+
+
+def get_exclude_date_range() -> tuple[Optional[datetime.date], Optional[datetime.date]]:
+    """Read the appointment exclude-date window from the environment.
+
+    `EXCLUDE_DATE_START` and `EXCLUDE_DATE_END` are expected in ISO format
+    (`YYYY-MM-DD`).
+    """
+    start = os.environ.get("EXCLUDE_DATE_START", "").strip()
+    end = os.environ.get("EXCLUDE_DATE_END", "").strip()
+    if not start and not end:
+        return None, None
+    return (
+        datetime.date.fromisoformat(start or DEFAULT_EXCLUDE_DATE_START),
+        datetime.date.fromisoformat(end or DEFAULT_EXCLUDE_DATE_END),
+    )
+
+
+def get_allowed_city_ids() -> tuple:
+    """Read the allowed city IDs from the environment.
+
+    `ALLOWED_CITY_IDS` is expected as a comma-separated list of IDs
+    e.g. "94,91".
+    """
+    raw = os.environ.get("ALLOWED_CITY_IDS", "")
+    return tuple(city_id.strip() for city_id in raw.split(",") if city_id.strip())
 
 
 def get_user_agent() -> str:
