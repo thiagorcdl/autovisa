@@ -39,7 +39,7 @@ Currently, the only cities listed are the ones in Canada.
 - [ ] Add better support for appointments with multiple applicants
 - [ ] Optionally pass credentials via arguments / input password via CLI
 - [ ] Pass list of allowed cities via arguments
-  - [ ] Slugify city names 
+  - [x] Slugify city names 
 - [ ] Pass acceptable date range via arguments
 - [ ] Add support for other countries
   - [ ] Replace locale in `LOGIN_URL`
