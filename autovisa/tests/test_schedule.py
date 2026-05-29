@@ -66,16 +66,39 @@ class TestScheduler(unittest.TestCase):
 
                 self.assertEqual(len(result), 1)
 
-    def test_navigate_reschedule_page(self):
-        """Test navigating to reschedule page."""
+    def test_navigate_reschedule_page_with_max_reschedule_notice(self):
+        """Test that a max-reschedule notification is accepted when shown.
+
+        When the ``.icheckbox`` consent appears, the flow ticks it and clicks
+        the extra "Continue" button, so the three base CTAs plus the checkbox
+        and its Continue add up to five selections.
+        """
         scheduler = Scheduler()
         scheduler.driver = MagicMock()
 
         with patch('autovisa.src.schedule.wait_page_load'):
-            scheduler.slow_select_element = MagicMock()
+            # A truthy checkbox triggers the extra Continue click.
+            scheduler.slow_select_element = MagicMock(return_value=MagicMock())
             scheduler.navigate_reschedule_page()
 
-            self.assertEqual(scheduler.slow_select_element.call_count, 3)
+            self.assertEqual(scheduler.slow_select_element.call_count, 5)
+            scheduler.slow_select_element.assert_any_call("input[value='Continue']")
+
+    def test_navigate_reschedule_page_without_max_reschedule_notice(self):
+        """Test that the extra Continue is skipped when no notification shows."""
+        scheduler = Scheduler()
+        scheduler.driver = MagicMock()
+
+        with patch('autovisa.src.schedule.wait_page_load'):
+            # Base CTAs return truthy elements; the checkbox lookup returns None.
+            scheduler.slow_select_element = MagicMock(
+                side_effect=[MagicMock(), MagicMock(), MagicMock(), None]
+            )
+            scheduler.navigate_reschedule_page()
+
+            self.assertEqual(scheduler.slow_select_element.call_count, 4)
+            for call in scheduler.slow_select_element.call_args_list:
+                self.assertNotEqual(call.args[0], "input[value='Continue']")
 
     def test_find_json_request(self):
         """Test finding JSON request."""
@@ -103,7 +126,12 @@ class TestScheduler(unittest.TestCase):
         candidate_repr = "2023-06-15"
         city = "Toronto"
 
-        result = scheduler.validate_candidate(candidate_date, candidate_repr, city)
+        # Neutralize the configured exclude-date window so this test isolates
+        # the "sooner than the current appointment" rule (the candidate date
+        # would otherwise fall inside the default EXCLUDE_DATE range).
+        with patch('autovisa.src.schedule.EXCLUDE_DATE_START', date(1900, 1, 1)), \
+                patch('autovisa.src.schedule.EXCLUDE_DATE_END', date(1900, 1, 2)):
+            result = scheduler.validate_candidate(candidate_date, candidate_repr, city)
 
         self.assertTrue(result)
 
@@ -140,10 +168,9 @@ class TestScheduler(unittest.TestCase):
                 mock_select_class.side_effect = [mock_city_select, mock_time_select]
 
                 with patch('autovisa.src.schedule.quick_sleep'):
-                    with patch('autovisa.src.schedule.selenium.webdriver.common.by.By.CSS_SELECTOR'):
-                        result = scheduler.execute_reschedule()
+                    result = scheduler.execute_reschedule()
 
-                        self.assertTrue(result)
+                    self.assertTrue(result)
 
     def test_run_reschedule_suite(self):
         """Test running complete reschedule suite."""

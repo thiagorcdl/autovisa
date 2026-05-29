@@ -1,11 +1,12 @@
 import logging
 import random
 import typing as t
+from pathlib import Path
 
 import seleniumwire
 from selenium import webdriver
 from selenium.common import ElementNotInteractableException, NoSuchElementException, \
-    InvalidSelectorException
+    InvalidSelectorException, StaleElementReferenceException
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.remote.webelement import WebElement
 from seleniumwire import undetected_chromedriver
@@ -13,7 +14,7 @@ from seleniumwire.undetected_chromedriver import ChromeOptions
 
 from autovisa.src.constants import (
     BY_TYPE_ORDER,
-    DEFAULT_WEBDRIVER_CLASS, LOGGER_NAME
+    DEFAULT_WEBDRIVER_CLASS, LOGGER_NAME, MAX_CLICK_ATTEMPTS
 )
 from autovisa.src.utils import (
     delayed, get_user_agent,
@@ -21,6 +22,38 @@ from autovisa.src.utils import (
 )
 
 logger = logging.getLogger(LOGGER_NAME)
+
+# Project-local, pinned Chrome install used to actually drive the site,
+# populated by scripts/install_chrome.sh.
+# webdriver.py lives at <repo>/autovisa/src/webdriver.py
+CHROME_DIR = Path(__file__).resolve().parents[2] / ".chrome"
+
+
+def _find_local_binary(pattern: str) -> t.Optional[str]:
+    """Return the first binary matching ``pattern`` under the local .chrome dir."""
+    matches = sorted(CHROME_DIR.glob(pattern))
+    return str(matches[0]) if matches else None
+
+
+def get_local_chrome() -> t.Tuple[t.Optional[str], t.Optional[str], t.Optional[int]]:
+    """Locate the project-local Chrome browser, chromedriver and major version.
+
+    Returns ``(browser_path, driver_path, version_main)``. Elements are ``None``
+    when the artifact is missing; run ``scripts/install_chrome.sh`` to populate
+    the ``.chrome`` directory with a matched browser/driver pair.
+    """
+    browser = _find_local_binary("chrome-*/chrome")
+    driver = _find_local_binary("chromedriver-*/chromedriver")
+
+    version_main = None
+    version_file = CHROME_DIR / "VERSION"
+    if version_file.exists():
+        try:
+            version_main = int(version_file.read_text().strip().split(".")[0])
+        except ValueError:
+            version_main = None
+
+    return browser, driver, version_main
 
 
 class WebDriver:
@@ -52,7 +85,19 @@ class WebDriver:
             options.add_argument('--ignore-certificate-errors')
             options.add_argument('--allow-insecure-localhost')
             driver_kwargs["options"] = options
-            driver_kwargs["version_main"] = 140
+
+            browser_path, driver_path, version_main = get_local_chrome()
+            if not browser_path or not driver_path:
+                raise FileNotFoundError(
+                    "Project-local Chrome not found in "
+                    f"'{CHROME_DIR}'. Run scripts/install_chrome.sh to download "
+                    "a matched Chrome browser and chromedriver."
+                )
+            options.binary_location = browser_path
+            driver_kwargs["browser_executable_path"] = browser_path
+            driver_kwargs["driver_executable_path"] = driver_path
+            if version_main is not None:
+                driver_kwargs["version_main"] = version_main
         elif self._WEBDRIVER_CLASS == webdriver.Firefox:
             profile = webdriver.FirefoxProfile()
             profile.set_preference("general.user_agent.override", user_agent)
@@ -68,9 +113,12 @@ class WebDriver:
         except (NoSuchElementException, InvalidSelectorException) as err:
             pass
 
-    def instant_select_element(self, key: str) -> t.Optional[WebElement]:
+    def instant_select_element(self, key: str, attempt: int = 1) -> t.Optional[WebElement]:
         """Find and click element."""
-        logger.debug("> select_element")
+        if attempt > MAX_CLICK_ATTEMPTS:
+            return None
+
+        logger.debug("> select_element" + f"(attempt #{attempt})" if attempt > 1 else "")
         for by_type in BY_TYPE_ORDER:
             element = self.find_element(by_type, key)
 
@@ -79,6 +127,8 @@ class WebDriver:
 
             try:
                 element.click()
+            except StaleElementReferenceException:
+                return self.instant_select_element(key, attempt + 1)
             except ElementNotInteractableException:
                 return None
             return element

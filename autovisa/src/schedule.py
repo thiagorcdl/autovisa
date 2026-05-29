@@ -90,6 +90,11 @@ class Scheduler(WebDriver):
         self.slow_select_element("//a[contains(text(), 'Reschedule Appointment')]")
         wait_page_load()
 
+        # If notification of max reschedules show up, accept
+        checkbox = self.slow_select_element(".icheckbox")
+        if checkbox:
+            self.slow_select_element("input[value='Continue']")
+
     def find_json_request(self, city) -> t.Optional[Request]:
         """Traverse requests list multiple times to find the JSON response,
         which contains the available dates.
@@ -112,9 +117,7 @@ class Scheduler(WebDriver):
                 return request
         return None
 
-    def validate_candidate(
-            self, candidate, candidate_repr, city
-    ) -> bool:
+    def validate_candidate(self, candidate, candidate_repr, city) -> bool:
         """Ensure candidate for new best date is sooner than the best ones so far."""
         logger.debug(f"> validate_candidate {candidate}")
         if candidate >= self.current_appointment.date:
@@ -170,7 +173,6 @@ class Scheduler(WebDriver):
         """Find the soonest available date among all cities."""
         logger.debug("> get_best_date")
         if "schedule" not in self.driver.current_url:
-            # return  # todo revert
             raise Exception("Session ended")
         self.new_appointment = None
 

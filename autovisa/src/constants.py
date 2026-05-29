@@ -37,6 +37,7 @@ CITY_NAME_ID_MAP = {
 }
 
 MAX_REQUEST_SEARCHES = 2
+MAX_CLICK_ATTEMPTS = 3
 
 # --- Constants that act as parameters --- #
 

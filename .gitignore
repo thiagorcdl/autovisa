@@ -142,3 +142,6 @@ dmypy.json
 
 # Task files
 .tasks
+
+# Project-local Chrome for Testing install (scripts/install_chrome.sh)
+.chrome/

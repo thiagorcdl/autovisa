@@ -8,11 +8,14 @@ from autovisa.src.webdriver import WebDriver
 class TestWebDriver(unittest.TestCase):
     """Test cases for WebDriver class."""
 
+    @patch('autovisa.src.webdriver.get_local_chrome')
     @patch('autovisa.src.webdriver.get_user_agent')
-    @patch('autovisa.src.webdriver.undetected_chromedriver.Chrome')
-    def test_webdriver_initialization(self, mock_chrome, mock_get_user_agent):
+    @patch('autovisa.src.webdriver.DEFAULT_WEBDRIVER_CLASS')
+    def test_webdriver_initialization(self, mock_chrome, mock_get_user_agent,
+                                      mock_get_local_chrome):
         """Test WebDriver initialization."""
         mock_get_user_agent.return_value = "Test User Agent"
+        mock_get_local_chrome.return_value = ("/fake/chrome", "/fake/chromedriver", 140)
         mock_driver_instance = MagicMock()
         mock_chrome.return_value = mock_driver_instance
 
@@ -98,6 +101,53 @@ class TestWebDriver(unittest.TestCase):
         result = web_driver.instant_select_element("test-id")
 
         self.assertIsNone(result)
+
+    def test_instant_select_element_stale_retry_succeeds(self):
+        """Test that a stale element on click is retried and eventually clicked."""
+        from selenium.common import StaleElementReferenceException
+
+        web_driver = WebDriver()
+        web_driver.driver = MagicMock()
+        mock_element = MagicMock()
+        # Stale on the first attempt, then a clean click on the retry.
+        mock_element.click.side_effect = [StaleElementReferenceException(), None]
+        web_driver.find_element = MagicMock(return_value=mock_element)
+
+        result = web_driver.instant_select_element("test-id")
+
+        self.assertEqual(result, mock_element)
+        self.assertEqual(mock_element.click.call_count, 2)
+
+    def test_instant_select_element_stale_exhausts_attempts(self):
+        """Test that persistent staleness gives up after MAX_CLICK_ATTEMPTS."""
+        from selenium.common import StaleElementReferenceException
+        from autovisa.src.constants import MAX_CLICK_ATTEMPTS
+
+        web_driver = WebDriver()
+        web_driver.driver = MagicMock()
+        mock_element = MagicMock()
+        mock_element.click.side_effect = StaleElementReferenceException()
+        web_driver.find_element = MagicMock(return_value=mock_element)
+
+        result = web_driver.instant_select_element("test-id")
+
+        self.assertIsNone(result)
+        self.assertEqual(mock_element.click.call_count, MAX_CLICK_ATTEMPTS)
+
+    def test_instant_select_element_attempt_over_limit(self):
+        """Test that an attempt past the limit returns immediately without searching."""
+        from autovisa.src.constants import MAX_CLICK_ATTEMPTS
+
+        web_driver = WebDriver()
+        web_driver.driver = MagicMock()
+        web_driver.find_element = MagicMock()
+
+        result = web_driver.instant_select_element(
+            "test-id", attempt=MAX_CLICK_ATTEMPTS + 1
+        )
+
+        self.assertIsNone(result)
+        web_driver.find_element.assert_not_called()
 
     @patch('autovisa.src.webdriver.delayed')
     def test_slow_select_element(self, mock_delayed):
