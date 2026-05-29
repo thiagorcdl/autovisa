@@ -40,7 +40,9 @@ class TestAppointment(unittest.TestCase):
         self.assertIn("2023-06-15", repr_str)
         self.assertIn("10:30", repr_str)
         self.assertIn("Toronto", repr_str)
-        self.assertIn("JOHN DOE", repr_str)
+        # The constructor stores the name as-is; only create_from_element
+        # upper-cases it, so the repr reflects the given casing.
+        self.assertIn("John Doe", repr_str)
 
     def test_date_repr(self):
         """Test date representation property."""

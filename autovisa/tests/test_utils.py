@@ -9,6 +9,21 @@ from autovisa.src.utils import (
 )
 
 
+class ClearEnvCacheMixin:
+    """Reset the lru_caches on the env-reading helpers before each test.
+
+    is_env/is_prod/is_testing/get_credentials are memoized, so without this a
+    result cached by an earlier test (or any other code in the process) would
+    survive ``patch.dict('os.environ', ...)`` and make these tests
+    order-dependent.
+    """
+
+    def setUp(self):
+        super().setUp()
+        for fn in (is_truthy, is_env, is_prod, is_testing, get_credentials):
+            fn.cache_clear()
+
+
 class TestIsTruthy(unittest.TestCase):
     """Test cases for is_truthy function."""
 
@@ -25,7 +40,7 @@ class TestIsTruthy(unittest.TestCase):
             self.assertFalse(is_truthy(value), f"Value '{value}' should be falsy")
 
 
-class TestIsEnv(unittest.TestCase):
+class TestIsEnv(ClearEnvCacheMixin, unittest.TestCase):
     """Test cases for is_env function."""
 
     @patch.dict('os.environ', {'FALSY_VAR': '0'})
@@ -44,7 +59,7 @@ class TestIsEnv(unittest.TestCase):
         self.assertFalse(is_env('MISSING_VAR'))
 
 
-class TestIsProd(unittest.TestCase):
+class TestIsProd(ClearEnvCacheMixin, unittest.TestCase):
     """Test cases for is_prod function."""
 
     @patch.dict('os.environ', {'PRODUCTION': '0'})
@@ -58,7 +73,7 @@ class TestIsProd(unittest.TestCase):
         self.assertTrue(is_prod())
 
 
-class TestIsTesting(unittest.TestCase):
+class TestIsTesting(ClearEnvCacheMixin, unittest.TestCase):
     """Test cases for is_testing function."""
 
     @patch.dict('os.environ', {'TEST': '0'})
@@ -72,7 +87,7 @@ class TestIsTesting(unittest.TestCase):
         self.assertTrue(is_testing())
 
 
-class TestGetCredentials(unittest.TestCase):
+class TestGetCredentials(ClearEnvCacheMixin, unittest.TestCase):
     """Test cases for get_credentials function."""
 
     @patch('autovisa.src.utils.is_testing', return_value=True)

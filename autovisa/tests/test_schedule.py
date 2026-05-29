@@ -103,7 +103,12 @@ class TestScheduler(unittest.TestCase):
         candidate_repr = "2023-06-15"
         city = "Toronto"
 
-        result = scheduler.validate_candidate(candidate_date, candidate_repr, city)
+        # Neutralize the configured exclude-date window so this test isolates
+        # the "sooner than the current appointment" rule (the candidate date
+        # would otherwise fall inside the default EXCLUDE_DATE range).
+        with patch('autovisa.src.schedule.EXCLUDE_DATE_START', date(1900, 1, 1)), \
+                patch('autovisa.src.schedule.EXCLUDE_DATE_END', date(1900, 1, 2)):
+            result = scheduler.validate_candidate(candidate_date, candidate_repr, city)
 
         self.assertTrue(result)
 
@@ -140,10 +145,9 @@ class TestScheduler(unittest.TestCase):
                 mock_select_class.side_effect = [mock_city_select, mock_time_select]
 
                 with patch('autovisa.src.schedule.quick_sleep'):
-                    with patch('autovisa.src.schedule.selenium.webdriver.common.by.By.CSS_SELECTOR'):
-                        result = scheduler.execute_reschedule()
+                    result = scheduler.execute_reschedule()
 
-                        self.assertTrue(result)
+                    self.assertTrue(result)
 
     def test_run_reschedule_suite(self):
         """Test running complete reschedule suite."""
