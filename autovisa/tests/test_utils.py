@@ -170,22 +170,17 @@ class TestSlugify(unittest.TestCase):
 class TestGetAllowedCityIds(unittest.TestCase):
     """Test cases for get_allowed_city_ids function."""
 
-    @patch.dict('os.environ', {'ALLOWED_CITY_IDS': 'Toronto, montreal ,quebec-city'})
+    @patch.dict('os.environ', {'ALLOWED_CITIES': 'Toronto, montreal ,quebec-city'})
     def test_slugs_from_env(self):
         """City names in any casing/spacing resolve to their IDs."""
         self.assertEqual(get_allowed_city_ids(), ('94', '91', '93'))
 
-    @patch.dict('os.environ', {'ALLOWED_CITY_IDS': 'Montréal,QUÉBEC CITY'})
+    @patch.dict('os.environ', {'ALLOWED_CITIES': 'Montréal,QUÉBEC CITY'})
     def test_accented_names_resolve(self):
         """Accented and upper-cased names still resolve."""
         self.assertEqual(get_allowed_city_ids(), ('91', '93'))
 
-    @patch.dict('os.environ', {'ALLOWED_CITY_IDS': '94, 91 ,93'})
-    def test_numeric_ids_backward_compatible(self):
-        """Raw numeric IDs are still accepted."""
-        self.assertEqual(get_allowed_city_ids(), ('94', '91', '93'))
-
-    @patch.dict('os.environ', {'ALLOWED_CITY_IDS': 'toronto, Toronto, unknown-city'})
+    @patch.dict('os.environ', {'ALLOWED_CITIES': 'toronto, Toronto, unknown-city'})
     def test_unknown_and_duplicates_dropped(self):
         """Unknown entries are ignored and duplicates collapsed in order."""
         self.assertEqual(get_allowed_city_ids(), ('94',))

@@ -16,7 +16,7 @@ from seleniumwire.request import Request
 from seleniumwire.utils import decode
 
 from autovisa.src.constants import (
-    CITY_NAME_ID_MAP, DEFAULT_USERAGENT, FALSY_STRINGS, MAX_ACTION_SLEEP,
+    CITY_SLUG_ID_MAP, DEFAULT_USERAGENT, FALSY_STRINGS, MAX_ACTION_SLEEP,
     MIN_ACTION_SLEEP, TEST_LOGIN, TEST_PWD, TEST_USERAGENT, LOGGER_NAME,
     DEFAULT_EXCLUDE_DATE_START, DEFAULT_EXCLUDE_DATE_END
 )
@@ -181,23 +181,16 @@ def slugify(value: str) -> str:
 def get_allowed_city_ids() -> tuple:
     """Read the allowed cities from the environment and resolve them to IDs.
 
-    `ALLOWED_CITY_IDS` is expected as a comma-separated list of city names
-    in any casing/spacing/accentuation, e.g. "Quebec City, toronto" or
-    "quebec-city,toronto". Each entry is slugified and matched against the
-    known cities. Raw numeric IDs (e.g. "93,94") are still accepted for
-    backward compatibility. Unknown entries are ignored, and duplicates are
+    `ALLOWED_CITIES` is expected as a comma-separated list of city names in
+    any casing/spacing/accentuation, e.g. "Quebec City, toronto" or
+    "quebec-city,toronto". Each entry is slugified and looked up in
+    `CITY_SLUG_ID_MAP`. Unknown entries are ignored, and duplicates are
     collapsed while preserving order.
     """
-    slug_to_id = {slugify(name): city_id for name, city_id in CITY_NAME_ID_MAP.items()}
-    known_ids = set(CITY_NAME_ID_MAP.values())
-
-    raw = os.environ.get("ALLOWED_CITY_IDS", "")
+    raw = os.environ.get("ALLOWED_CITIES", "")
     allowed: list = []
     for entry in raw.split(","):
-        entry = entry.strip()
-        if not entry:
-            continue
-        city_id = entry if entry in known_ids else slug_to_id.get(slugify(entry))
+        city_id = CITY_SLUG_ID_MAP.get(slugify(entry))
         if city_id and city_id not in allowed:
             allowed.append(city_id)
     return tuple(allowed)
