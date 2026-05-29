@@ -18,23 +18,17 @@ Currently, the only cities listed are the ones in Canada.
 1. Clone repository
 2. Install packages `pip install -r requirements.txt`
 3. Install a matched Chrome browser + chromedriver: `./scripts/install_chrome.sh`
-   - Downloads a self-contained, pinned Chrome build into a project-local
-     `.chrome/` directory (works on Linux, WSL and macOS). This is the real
-     browser used to drive the site; it is pinned so it always matches the
-     chromedriver and never auto-updates out from under it. The version is set
-     in `.chrome-version`.
 4. Export env variables:
    ```
    VISA_EMAIL="your@email.com"
    VISA_PASSWORD="your_password"
    APPLICANT_ID="YOURAPPID"
-   BASE_URL="https://consulate.base.url"
+   BASE_URL="https://your-consulate.base.url"
    PRODUCTION=1
    ```
 5. Run `python -m autovisa`
 
 # TODO
-- [x] Add unit tests
 - [ ] Add better support for appointments with multiple applicants
 - [ ] Optionally pass credentials via arguments / input password via CLI
 - [ ] Pass list of allowed cities via arguments
